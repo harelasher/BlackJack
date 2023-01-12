@@ -6,7 +6,7 @@ from pygame.locals import *
 LoggedIn = False
 
 
-# (rect_x + rect_width // 2, rect_y + rect_height // 2) --
+# (rect_x + rect_width // 2, rect_y + rect_height // 2) -->
 def draw_text(text, font, color, surface, x, y):
     textobj = font.render(text, 1, color)
     textrect = textobj.get_rect()
@@ -132,6 +132,8 @@ def login_menu():
                         active_username = True
                     elif password_button.collidepoint(event.pos):
                         active_password = True
+                    elif enter_button.collidepoint(event.pos):
+                        enter_func(username_txt, password_txt)
                     if not username_button.collidepoint(event.pos):
                         active_username = False
                     if not password_button.collidepoint(event.pos):
@@ -223,6 +225,7 @@ def register_menu():
             clock.tick(120)
     else:
         pass
-
+def enter_func(username, password):
+    print(username, password)
 
 main_menu()
