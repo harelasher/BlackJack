@@ -1,39 +1,34 @@
+# Import module
 import sqlite3
+DatabasePath = 'blackjack.db'
 
-# Connect to the database (or create it if it doesn't exist)
-conn = sqlite3.connect('example.db')
+class DataBase:
+    def __init__(self):
+        self.DB = sqlite3.connect(DatabasePath)
 
-# Create a cursor object to execute SQL commands
+
+# Creating a cursor object using the
+# cursor() method
 cursor = conn.cursor()
 
-# Create a table
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY,
-        username TEXT,
-        password TEXT,
-        highscore INTEGER
-    )
-''')
+# Creating table
+table = """CREATE TABLE STUDENT(NAME VARCHAR(255), CLASS VARCHAR(255),
+SECTION VARCHAR(255));"""
+cursor.execute(table)
 
-# Insert some data
-cursor.execute('''
-    INSERT INTO users (username, password, highscore)
-    VALUES ('alice', 'secret', 100), ('bob', 'password', 200)
-''')
+# Queries to INSERT records.
+cursor.execute('''INSERT INTO STUDENT VALUES ('Raju', '7th', 'A')''')
+cursor.execute('''INSERT INTO STUDENT VALUES ('Shyam', '8th', 'B')''')
+cursor.execute('''INSERT INTO STUDENT VALUES ('Baburao', '9th', 'C')''')
 
-# Commit the changes to the database
+# Display data inserted
+print("Data Inserted in the table: ")
+data = cursor.execute('''SELECT * FROM STUDENT''')
+for row in data:
+    print(row)
+
+# Commit your changes in the database    
 conn.commit()
 
-# Run a query to select all users from the table
-cursor.execute('SELECT * FROM users')
-
-# Fetch the result
-users = cursor.fetchall()
-
-# Print the result
-for user in users:
-    print(user)
-
-# Close the connection
+# Closing the connection
 conn.close()
