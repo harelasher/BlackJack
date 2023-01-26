@@ -1,4 +1,5 @@
 import sys
+from DB_Class import *
 import pygame
 from pygame.locals import *
 
@@ -42,6 +43,9 @@ ButtonFont = pygame.font.Font("Fonts/Copperplate Gothic Bold Regular.ttf", 28)
 MediumFont = pygame.font.SysFont("gabriola", 40)
 LowFont = pygame.font.SysFont("gabriola", 20)
 HelveticaFont = pygame.font.Font('Fonts/Copperplate Gothic Bold Regular.ttf', 20)
+
+# DataBase
+db = Database()
 
 clock = pygame.time.Clock()
 
@@ -133,7 +137,7 @@ def login_menu():
                     elif password_button.collidepoint(event.pos):
                         active_password = True
                     elif enter_button.collidepoint(event.pos):
-                        enter_func(username_txt, password_txt)
+                        enter_func(username_txt, password_txt, "login")
                     if not username_button.collidepoint(event.pos):
                         active_username = False
                     if not password_button.collidepoint(event.pos):
@@ -202,6 +206,8 @@ def register_menu():
                         active_username = True
                     elif password_button.collidepoint(event.pos):
                         active_password = True
+                    elif enter_button.collidepoint(event.pos):
+                        enter_func(username_txt, password_txt, "register")
                     if not username_button.collidepoint(event.pos):
                         active_username = False
                     if not password_button.collidepoint(event.pos):
@@ -223,9 +229,17 @@ def register_menu():
 
             pygame.display.update()
             clock.tick(120)
-    else:
-        pass
-def enter_func(username, password):
-    print(username, password)
+        else:
+            pass
+
+
+def enter_func(username, password, reg_log):
+    if reg_log == "login":
+        result = db.login_check(username, password)
+        print(result)
+    elif reg_log == "register":
+        result = db.create_user(username, password)
+        print(result)
+
 
 main_menu()
