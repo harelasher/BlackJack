@@ -1,6 +1,7 @@
 import random
 from card import Card
 
+
 class Deck:
     def __init__(self):
         self.cards = []
@@ -9,7 +10,7 @@ class Deck:
         for i in range(1, 14):
             for j in range(4):
                 self.cards.append(Card(i, j))
-    
+
     def draw(self, iteration):
         cards = []
         for i in range(iteration):

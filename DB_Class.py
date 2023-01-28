@@ -22,7 +22,7 @@ class Database:
         self.conn.commit()
 
     def create_user(self, username, password):  # register the user
-        if 3 < len(username) < 10 and 3 < len(password) < 10:
+        if 3 <= len(username) < 10 and 3 <= len(password) < 10:
             self.cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
             if self.cursor.fetchone() is None:
                 self.cursor.execute("""INSERT INTO users (username, password, score, highscore,last_seen)
