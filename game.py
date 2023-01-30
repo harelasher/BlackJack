@@ -4,7 +4,7 @@ import pygame
 from pygame.locals import *
 
 # Variables
-LoggedIn = False
+global LoggedIn
 
 
 # (rect_x + rect_width // 2, rect_y + rect_height // 2) -->
@@ -50,27 +50,222 @@ db = Database()
 clock = pygame.time.Clock()
 
 
+def bj_screen():
+    screen.blit(overlay, (0, 0))
+
+    draw_text("BlackJack", MainScreenFont, (255, 255, 255), screen, display_width // 2, 120 // 2)
+    draw_text("By Harel Asher", LowFont, (255, 255, 255), screen, display_width // 2, 220 // 2)
+# to show to regular screen
+
+
 def main_menu():
+    global LoggedIn
+    LoggedIn = False
     while True:
-        screen.blit(overlay, (0, 0))
+        bj_screen()
 
-        draw_text("BlackJack", MainScreenFont, (255, 255, 255), screen, display_width // 2, 120 // 2)
-        draw_text("By Harel Asher", LowFont, (255, 255, 255), screen, display_width // 2, 220 // 2)
+        login_button = pygame.Rect(265, 200, 270, 65)
+        pygame.draw.rect(screen, "white", login_button, 3, border_radius=10)
+        draw_text("Login", ButtonFont, (255, 255, 255), screen, (login_button.x + login_button.w // 2),
+                  (login_button.y + login_button.h // 2))
 
-        play_button = pygame.Rect(265, 200, 270, 65)
-        pygame.draw.rect(screen, "white", play_button, 3, border_radius=10)
-        draw_text("Login", ButtonFont, (255, 255, 255), screen, (play_button.x + play_button.w // 2),
-                  (play_button.y + play_button.h // 2))
+        Register_button = pygame.Rect(login_button.x, login_button.y + 110, login_button.w, login_button.h)
+        pygame.draw.rect(screen, "white", Register_button, 3, border_radius=10)
+        draw_text("Register", ButtonFont, (255, 255, 255), screen, (Register_button.x + Register_button.w // 2),
+                  (Register_button.y + login_button.h // 2))
 
-        help_button = pygame.Rect(play_button.x, play_button.y + 110, play_button.w, play_button.h)
-        pygame.draw.rect(screen, "white", help_button, 3, border_radius=10)
-        draw_text("Register", ButtonFont, (255, 255, 255), screen, (help_button.x + help_button.w // 2),
-                  (help_button.y + play_button.h // 2))
-
-        quit_button = pygame.Rect(help_button.x, help_button.y + 110, help_button.w, help_button.h)
+        quit_button = pygame.Rect(Register_button.x, Register_button.y + 110, Register_button.w, Register_button.h)
         pygame.draw.rect(screen, "white", quit_button, 3, border_radius=10)
         draw_text("quit", ButtonFont, (255, 255, 255), screen, (quit_button.x + quit_button.w // 2),
-                  (quit_button.y + help_button.h // 2))
+                  (quit_button.y + Register_button.h // 2))
+
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == KEYDOWN:
+                if event.key == K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
+            if event.type == MOUSEBUTTONDOWN:
+                if login_button.collidepoint(event.pos):
+                    login_menu()
+                if Register_button.collidepoint(event.pos):
+                    register_menu()
+                if quit_button.collidepoint(event.pos):
+                    pygame.quit()
+                    sys.exit()
+
+        pygame.display.update()
+        clock.tick(120)
+# main screen of the game
+
+
+def login_menu():
+    global LoggedIn
+    active_username = False
+    active_password = False
+    username_txt = ""
+    password_txt = ""
+
+    if LoggedIn:
+        loggedin_menu()
+
+    while True:
+        bj_screen()
+
+        draw_text("login", ButtonFont, (255, 255, 255), screen, display_width // 2, 232 - 40)
+
+        username_button = pygame.Rect(265, 240, 270, 60)
+        pygame.draw.rect(screen, "white", username_button, 3, border_radius=10)
+
+        password_button = pygame.Rect(username_button.x, username_button.y + 90, username_button.w,
+                                      username_button.h)
+        pygame.draw.rect(screen, "white", password_button, 3, border_radius=10)
+
+        enter_button = pygame.Rect(username_button.x + 70, password_button.y + 90, username_button.w - 140,
+                                   username_button.h)
+        pygame.draw.rect(screen, "white", enter_button, 3)
+        draw_text("enter", ButtonFont, (255, 255, 255), screen, (enter_button.x + enter_button.w // 2),
+                  (enter_button.y + enter_button.h // 2))
+
+        draw_text(username_txt, ButtonFont, (255, 255, 255), screen, username_button.x + username_button.w // 2,
+                  username_button.y + username_button.h // 2)
+        draw_text(password_txt, ButtonFont, (255, 255, 255), screen, password_button.x + password_button.w // 2,
+                  password_button.y + password_button.h // 2)
+
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == MOUSEBUTTONDOWN:
+                if username_button.collidepoint(event.pos):
+                    active_username = True
+                elif password_button.collidepoint(event.pos):
+                    active_password = True
+                elif enter_button.collidepoint(event.pos):
+                    result = enter_func(username_txt, password_txt, "login")
+                    if result:
+                        loggedin_menu()
+                if not username_button.collidepoint(event.pos):
+                    active_username = False
+                if not password_button.collidepoint(event.pos):
+                    active_password = False
+
+            if event.type == KEYDOWN:
+                if event.key == K_ESCAPE:
+                    return
+                if active_username:
+                    if event.key == pygame.K_BACKSPACE:
+                        username_txt = username_txt[:-1]
+                    elif len(username_txt) < 9:
+                        username_txt += event.unicode.lower()
+                if active_password:
+                    if event.key == pygame.K_BACKSPACE:
+                        password_txt = password_txt[:-1]
+                    elif len(password_txt) < 9:
+                        password_txt += event.unicode.lower()
+
+        pygame.display.update()
+        clock.tick(120)
+# login page
+
+
+def register_menu():
+    global LoggedIn
+    active_username = False
+    active_password = False
+    username_txt = ""
+    password_txt = ""
+    if LoggedIn:
+        loggedin_menu()
+
+    while True:
+        bj_screen()
+
+        draw_text("register", ButtonFont, (255, 255, 255), screen, display_width // 2, 232 - 40)
+
+        username_button = pygame.Rect(265, 240, 270, 60)
+        pygame.draw.rect(screen, "white", username_button, 3, border_radius=10)
+
+        password_button = pygame.Rect(username_button.x, username_button.y + 90, username_button.w,
+                                      username_button.h)
+        pygame.draw.rect(screen, "white", password_button, 3, border_radius=10)
+
+        enter_button = pygame.Rect(username_button.x + 70, password_button.y + 90, username_button.w - 140,
+                                   username_button.h)
+        pygame.draw.rect(screen, "white", enter_button, 3)
+        draw_text("enter", ButtonFont, (255, 255, 255), screen, (enter_button.x + enter_button.w // 2),
+                  (enter_button.y + enter_button.h // 2))
+
+        draw_text(username_txt, ButtonFont, (255, 255, 255), screen, username_button.x + username_button.w // 2,
+                  username_button.y + username_button.h // 2)
+        draw_text(password_txt, ButtonFont, (255, 255, 255), screen, password_button.x + password_button.w // 2,
+                  password_button.y + password_button.h // 2)
+
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == MOUSEBUTTONDOWN:
+                if username_button.collidepoint(event.pos):
+                    active_username = True
+                elif password_button.collidepoint(event.pos):
+                    active_password = True
+                elif enter_button.collidepoint(event.pos):
+                    result = enter_func(username_txt, password_txt, "register")
+                    if result:
+                        loggedin_menu()
+                if not username_button.collidepoint(event.pos):
+                    active_username = False
+                if not password_button.collidepoint(event.pos):
+                    active_password = False
+
+            if event.type == KEYDOWN:
+                if event.key == K_ESCAPE:
+                    return
+                if active_username:
+                    if event.key == pygame.K_BACKSPACE:
+                        username_txt = username_txt[:-1]
+                    elif len(username_txt) < 9:
+                        username_txt += event.unicode.lower()
+                if active_password:
+                    if event.key == pygame.K_BACKSPACE:
+                        password_txt = password_txt[:-1]
+                    elif len(password_txt) < 9:
+                        password_txt += event.unicode.lower()
+
+        pygame.display.update()
+        clock.tick(120)
+# register page
+
+
+def loggedin_menu():
+    global LoggedIn
+    while True:
+        bj_screen()
+
+        play_button = pygame.Rect(265, 180, 270, 65)
+        pygame.draw.rect(screen, "white", play_button, 3, border_radius=10)
+        draw_text("play", ButtonFont, (255, 255, 255), screen, (play_button.x + play_button.w // 2),
+                  (play_button.y + play_button.h // 2))
+
+        logout_button = pygame.Rect(play_button.x, play_button.y + 90, play_button.w, play_button.h)
+        pygame.draw.rect(screen, "white", logout_button, 3, border_radius=10)
+        draw_text("logout", ButtonFont, (255, 255, 255), screen, (logout_button.x + logout_button.w // 2),
+                  (logout_button.y + play_button.h // 2))
+
+        help_button = pygame.Rect(play_button.x, logout_button.y + 90, play_button.w, play_button.h)
+        pygame.draw.rect(screen, "white", help_button, 3, border_radius=10)
+        draw_text("help", ButtonFont, (255, 255, 255), screen, (help_button.x + help_button.w // 2),
+                  (help_button.y + play_button.h // 2))
+
+        quit_button = pygame.Rect(play_button.x, help_button.y + 90, play_button.w, play_button.h)
+        pygame.draw.rect(screen, "white", quit_button, 3, border_radius=10)
+        draw_text("quit", ButtonFont, (255, 255, 255), screen, (quit_button.x + quit_button.w // 2),
+                  (quit_button.y + play_button.h // 2))
 
         for event in pygame.event.get():
             if event.type == QUIT:
@@ -82,164 +277,34 @@ def main_menu():
                     sys.exit()
             if event.type == MOUSEBUTTONDOWN:
                 if play_button.collidepoint(event.pos):
-                    login_menu()
+                    pass  # main screen
                 if help_button.collidepoint(event.pos):
-                    register_menu()
+                    pass  # help screen
+                if logout_button.collidepoint(event.pos):
+                    LoggedIn = False
+                    main_menu()
                 if quit_button.collidepoint(event.pos):
                     pygame.quit()
                     sys.exit()
 
         pygame.display.update()
         clock.tick(120)
+#  user is logged and he can: logout and go to the 'main_menu', play to play the game, help for tutorial, and quit
 
 
-def login_menu():
-    active_username = False
-    active_password = False
-    username_txt = ""
-    password_txt = ""
-    if not LoggedIn:
-        running = True
-        while running:
-            screen.blit(overlay, (0, 0))
-
-            draw_text("BlackJack", MainScreenFont, (255, 255, 255), screen, display_width // 2, 120 // 2)
-            draw_text("By Harel Asher", LowFont, (255, 255, 255), screen, display_width // 2, 220 // 2)
-
-            draw_text("login", ButtonFont, (255, 255, 255), screen, display_width // 2, 232 - 40)
-
-            username_button = pygame.Rect(265, 240, 270, 60)
-            pygame.draw.rect(screen, "white", username_button, 3, border_radius=10)
-
-            password_button = pygame.Rect(username_button.x, username_button.y + 90, username_button.w,
-                                          username_button.h)
-            pygame.draw.rect(screen, "white", password_button, 3, border_radius=10)
-
-            enter_button = pygame.Rect(username_button.x + 70, password_button.y + 90, username_button.w - 140,
-                                       username_button.h)
-            pygame.draw.rect(screen, "white", enter_button, 3)
-            draw_text("enter", ButtonFont, (255, 255, 255), screen, (enter_button.x + enter_button.w // 2),
-                      (enter_button.y + enter_button.h // 2))
-
-            draw_text(username_txt, ButtonFont, (255, 255, 255), screen, username_button.x + username_button.w // 2,
-                      username_button.y + username_button.h // 2)
-            draw_text(password_txt, ButtonFont, (255, 255, 255), screen, password_button.x + password_button.w // 2,
-                      password_button.y + password_button.h // 2)
-
-            for event in pygame.event.get():
-                if event.type == QUIT:
-                    pygame.quit()
-                    sys.exit()
-
-                if event.type == MOUSEBUTTONDOWN:
-                    if username_button.collidepoint(event.pos):
-                        active_username = True
-                    elif password_button.collidepoint(event.pos):
-                        active_password = True
-                    elif enter_button.collidepoint(event.pos):
-                        enter_func(username_txt, password_txt, "login")
-                    if not username_button.collidepoint(event.pos):
-                        active_username = False
-                    if not password_button.collidepoint(event.pos):
-                        active_password = False
-
-                if event.type == KEYDOWN:
-                    if event.key == K_ESCAPE:
-                        return
-                    if active_username:
-                        if event.key == pygame.K_BACKSPACE:
-                            username_txt = username_txt[:-1]
-                        elif len(username_txt) < 9:
-                            username_txt += event.unicode.lower()
-                    if active_password:
-                        if event.key == pygame.K_BACKSPACE:
-                            password_txt = password_txt[:-1]
-                        elif len(password_txt) < 9:
-                            password_txt += event.unicode.lower()
-
-            pygame.display.update()
-            clock.tick(120)
-    else:
-        pass
-
-
-def register_menu():
-    active_username = False
-    active_password = False
-    username_txt = ""
-    password_txt = ""
-    if not LoggedIn:
-        running = True
-        while running:
-            screen.blit(overlay, (0, 0))
-
-            draw_text("BlackJack", MainScreenFont, (255, 255, 255), screen, display_width // 2, 120 // 2)
-            draw_text("By Harel Asher", LowFont, (255, 255, 255), screen, display_width // 2, 220 // 2)
-
-            draw_text("register", ButtonFont, (255, 255, 255), screen, display_width // 2, 232 - 40)
-
-            username_button = pygame.Rect(265, 240, 270, 60)
-            pygame.draw.rect(screen, "white", username_button, 3, border_radius=10)
-
-            password_button = pygame.Rect(username_button.x, username_button.y + 90, username_button.w,
-                                          username_button.h)
-            pygame.draw.rect(screen, "white", password_button, 3, border_radius=10)
-
-            enter_button = pygame.Rect(username_button.x + 70, password_button.y + 90, username_button.w - 140,
-                                       username_button.h)
-            pygame.draw.rect(screen, "white", enter_button, 3)
-            draw_text("enter", ButtonFont, (255, 255, 255), screen, (enter_button.x + enter_button.w // 2),
-                      (enter_button.y + enter_button.h // 2))
-
-            draw_text(username_txt, ButtonFont, (255, 255, 255), screen, username_button.x + username_button.w // 2,
-                      username_button.y + username_button.h // 2)
-            draw_text(password_txt, ButtonFont, (255, 255, 255), screen, password_button.x + password_button.w // 2,
-                      password_button.y + password_button.h // 2)
-
-            for event in pygame.event.get():
-                if event.type == QUIT:
-                    pygame.quit()
-                    sys.exit()
-
-                if event.type == MOUSEBUTTONDOWN:
-                    if username_button.collidepoint(event.pos):
-                        active_username = True
-                    elif password_button.collidepoint(event.pos):
-                        active_password = True
-                    elif enter_button.collidepoint(event.pos):
-                        enter_func(username_txt, password_txt, "register")
-                    if not username_button.collidepoint(event.pos):
-                        active_username = False
-                    if not password_button.collidepoint(event.pos):
-                        active_password = False
-
-                if event.type == KEYDOWN:
-                    if event.key == K_ESCAPE:
-                        return
-                    if active_username:
-                        if event.key == pygame.K_BACKSPACE:
-                            username_txt = username_txt[:-1]
-                        elif len(username_txt) < 9:
-                            username_txt += event.unicode.lower()
-                    if active_password:
-                        if event.key == pygame.K_BACKSPACE:
-                            password_txt = password_txt[:-1]
-                        elif len(password_txt) < 9:
-                            password_txt += event.unicode.lower()
-
-            pygame.display.update()
-            clock.tick(120)
-        else:
-            pass
+def play_menu():
+    pass
 
 
 def enter_func(username, password, reg_log):
+    global LoggedIn
     if reg_log == "login":
         result = db.login_check(username, password)
-        print(result)
+        LoggedIn = result
     elif reg_log == "register":
         result = db.create_user(username, password)
-        print(result)
+        LoggedIn = result
+    return result
 
 
 main_menu()

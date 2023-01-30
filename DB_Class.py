@@ -11,6 +11,7 @@ class Database:
     def __init__(self):
         self.conn = sqlite3.connect(DatabasePath)
         self.cursor = self.conn.cursor()
+        self.cursor.execute("PRAGMA key='secret-key'")
         self.cursor.execute(
             """CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY, 
@@ -70,6 +71,8 @@ class Database:
         self.conn.close()
 
 
+db = Database()
+db.create_user("rest", "esadg")
 et = time.time()
 
 # get the execution time
