@@ -9,7 +9,7 @@ st = time.time()
 
 class Database:
     def __init__(self):
-        self.conn = sqlite3.connect(DatabasePath)
+        self.conn = sqlite3.connect(DatabasePath, check_same_thread=False)
         self.cursor = self.conn.cursor()
         self.cursor.execute("PRAGMA key='secret-key'")
         self.cursor.execute(
@@ -84,6 +84,10 @@ print('Execution time:', elapsed_time, 'seconds')
 This code does not consider security measures for login,
 such as salting and hashing passwords,
 which is a must for any production system.
+'''
+'''
+add a protocol that goes over tcp. he builds and parses the messages that sent to the socket.
+(encrypted too)
 '''
 #######################################################################################################################
 '''

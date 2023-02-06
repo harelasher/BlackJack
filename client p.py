@@ -1,4 +1,6 @@
 import socket
+import game
+import t
 
 
 def connect(ip, port):
@@ -8,25 +10,32 @@ def connect(ip, port):
     return client_socket
 
 
-def send_message(client_socket, message):
-    """Sends a message to the server"""
-    client_socket.send(message.encode())
+def build_send_recv_parse(conn, code, data):  # מחבר את שתי הפונקציה, יוצר הודעה שולח אותה ומחכה לתשובה
+    build_and_send_message(conn, code, data)
+    msg_code, msg = recv_message_and_parse(conn)
+    return msg_code, msg
 
 
-def rec_message(client_socket):
-    """Receives a message from the server"""
-    return client_socket.recv(1024).decode()
+def build_and_send_message(conn, code, msg):  # פונקציה לבניית הודעה ושליחה לשרת
+    full_msg = t.build_message(code, msg)  # בונה את ההודעה
+    conn.send(full_msg.encode('utf-8'))  # ושולח את ההודעה
+
+
+def recv_message_and_parse(conn):  # פונקציה לקבלת מידע מהשרת
+    data = conn.recv(1024).decode()  # הלקוח קולט מידע
+    cmd, msg = t.parse_message(data)  # מנתח את המידע
+    if cmd != t.ERROR or msg != t.ERROR:  # אם המידע הוא לא שגיאה
+        # print(f"The server sent: {data}")
+        # print(f"Interpretation:\nCommand: {cmd}, message: {msg}")
+        return cmd, msg
+    else:
+        return t.ERROR, t.ERROR
 
 
 def main(ip, port):
     """Main function for the client"""
     client_socket = connect(ip, port)
-    while True:
-        message = input("Enter message to send: ")
-        send_message(client_socket, message)
-        if message == "bye":
-            break
-        print("Received from server: ", rec_message(client_socket))
+    game.main_menu()
     client_socket.close()
 
 

@@ -1,30 +1,9 @@
 import threading
 import socket
+from DB_Class import *
+from t import *
 
-
-def rec_message(client_socket):
-    data = client_socket.recv(1024).decode()
-    if len(data) == 0:
-        return ""
-    return data
-
-
-def handle_client_message(client_socket, address):
-    """Handles messages from a single client"""
-    while True:
-        message = rec_message(client_socket)
-        print(message)
-        if len(message) == 0:
-            print("~connection stopped~")
-            client_socket.close()
-            break
-        if message == "bye":
-            client_socket.send("bye".encode())
-            client_socket.close()
-            break
-
-        client_socket.send(f"You sent: {message}".encode())
-    client_socket.close()
+db = Database()
 
 
 def setup_socket():
@@ -35,6 +14,28 @@ def setup_socket():
     return server_socket
 
 
+def handle_login_message(conn, data):
+    username, password = data.split("#")[0], data.split("#")[1]
+    result = db.login_check(username, password)
+    if result:
+        build_and_send_message(conn, PROTOCOL_SERVER["login_ok_msg"], "")
+    else:
+        build_and_send_message(conn, PROTOCOL_SERVER["login_failed_msg"], "fails")
+
+
+def handle_client_message(client_socket):
+    """Handles messages from a single client"""
+    while True:
+        cmd, msg = recv_message_and_parse(client_socket)
+        if len(cmd) == 0 or len(msg) == 0:
+            print("~connection stopped~")
+            client_socket.close()
+            break
+        elif cmd == "LOGIN":
+            handle_login_message(client_socket, msg)
+    client_socket.close()
+
+
 def main():
     """Main function for the server"""
     server_socket = setup_socket()
@@ -42,7 +43,7 @@ def main():
     while True:
         client_socket, address = server_socket.accept()
         print(f"Client connected from {address}")
-        client_thread = threading.Thread(target=handle_client_message, args=(client_socket, address))
+        client_thread = threading.Thread(target=handle_client_message, args=(client_socket, ))
         client_thread.start()
 
 

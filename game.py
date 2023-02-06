@@ -1,10 +1,14 @@
 import sys
-from DB_Class import *
 import pygame
 from pygame.locals import *
+import string
+import socket
+from t import *
 
 # Variables
 global LoggedIn
+
+available_chars = string.ascii_lowercase + string.digits + string.punctuation
 
 
 # (rect_x + rect_width // 2, rect_y + rect_height // 2) -->
@@ -45,7 +49,6 @@ LowFont = pygame.font.SysFont("gabriola", 20)
 HelveticaFont = pygame.font.Font('Fonts/Copperplate Gothic Bold Regular.ttf', 20)
 
 # DataBase
-db = Database()
 
 clock = pygame.time.Clock()
 
@@ -55,10 +58,12 @@ def bj_screen():
 
     draw_text("BlackJack", MainScreenFont, (255, 255, 255), screen, display_width // 2, 120 // 2)
     draw_text("By Harel Asher", LowFont, (255, 255, 255), screen, display_width // 2, 220 // 2)
+
+
 # to show to regular screen
 
 
-def main_menu():
+def main_menu(conn):
     global LoggedIn
     LoggedIn = False
     while True:
@@ -89,19 +94,21 @@ def main_menu():
                     sys.exit()
             if event.type == MOUSEBUTTONDOWN:
                 if login_button.collidepoint(event.pos):
-                    login_menu()
+                    login_menu(conn)
                 if Register_button.collidepoint(event.pos):
-                    register_menu()
+                    register_menu(conn)
                 if quit_button.collidepoint(event.pos):
                     pygame.quit()
                     sys.exit()
 
         pygame.display.update()
         clock.tick(120)
+
+
 # main screen of the game
 
 
-def login_menu():
+def login_menu(conn):
     global LoggedIn
     active_username = False
     active_password = False
@@ -109,7 +116,7 @@ def login_menu():
     password_txt = ""
 
     if LoggedIn:
-        loggedin_menu()
+        loggedin_menu(conn)
 
     while True:
         bj_screen()
@@ -145,9 +152,12 @@ def login_menu():
                 elif password_button.collidepoint(event.pos):
                     active_password = True
                 elif enter_button.collidepoint(event.pos):
-                    result = enter_func(username_txt, password_txt, "login")
-                    if result:
-                        loggedin_menu()
+                    cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["login_msg"],
+                                                     username_txt + DATA_DELIMITER + password_txt)
+                    if cmd == 'LOGIN_OK':
+                        loggedin_menu(conn)
+                    else:
+                        print(msg)
                 if not username_button.collidepoint(event.pos):
                     active_username = False
                 if not password_button.collidepoint(event.pos):
@@ -159,27 +169,29 @@ def login_menu():
                 if active_username:
                     if event.key == pygame.K_BACKSPACE:
                         username_txt = username_txt[:-1]
-                    elif len(username_txt) < 9:
+                    elif len(username_txt) < 9 and event.unicode.lower() in available_chars:
                         username_txt += event.unicode.lower()
                 if active_password:
                     if event.key == pygame.K_BACKSPACE:
                         password_txt = password_txt[:-1]
-                    elif len(password_txt) < 9:
+                    elif len(password_txt) < 9 and event.unicode.lower() in available_chars:
                         password_txt += event.unicode.lower()
 
         pygame.display.update()
         clock.tick(120)
+
+
 # login page
 
 
-def register_menu():
+def register_menu(conn):
     global LoggedIn
     active_username = False
     active_password = False
     username_txt = ""
     password_txt = ""
     if LoggedIn:
-        loggedin_menu()
+        loggedin_menu(conn)
 
     while True:
         bj_screen()
@@ -217,7 +229,7 @@ def register_menu():
                 elif enter_button.collidepoint(event.pos):
                     result = enter_func(username_txt, password_txt, "register")
                     if result:
-                        loggedin_menu()
+                        loggedin_menu(conn)
                 if not username_button.collidepoint(event.pos):
                     active_username = False
                 if not password_button.collidepoint(event.pos):
@@ -229,20 +241,22 @@ def register_menu():
                 if active_username:
                     if event.key == pygame.K_BACKSPACE:
                         username_txt = username_txt[:-1]
-                    elif len(username_txt) < 9:
+                    elif len(username_txt) < 9 and event.unicode.lower() in available_chars:
                         username_txt += event.unicode.lower()
                 if active_password:
                     if event.key == pygame.K_BACKSPACE:
                         password_txt = password_txt[:-1]
-                    elif len(password_txt) < 9:
+                    elif len(password_txt) < 9 and event.unicode.lower() in available_chars:
                         password_txt += event.unicode.lower()
 
         pygame.display.update()
         clock.tick(120)
+
+
 # register page
 
 
-def loggedin_menu():
+def loggedin_menu(conn):
     global LoggedIn
     while True:
         bj_screen()
@@ -282,29 +296,35 @@ def loggedin_menu():
                     pass  # help screen
                 if logout_button.collidepoint(event.pos):
                     LoggedIn = False
-                    main_menu()
+                    main_menu(conn)
                 if quit_button.collidepoint(event.pos):
                     pygame.quit()
                     sys.exit()
 
         pygame.display.update()
         clock.tick(120)
+
+
 #  user is logged and he can: logout and go to the 'main_menu', play to play the game, help for tutorial, and quit
 
 
-def play_menu():
+def play_menu(conn):
     pass
 
 
-def enter_func(username, password, reg_log):
-    global LoggedIn
-    if reg_log == "login":
-        result = db.login_check(username, password)
-        LoggedIn = result
-    elif reg_log == "register":
-        result = db.create_user(username, password)
-        LoggedIn = result
-    return result
+def connect(ip, port):
+    """Connects to the server"""
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect((ip, port))
+    return client_socket
 
 
-main_menu()
+def main(ip, port):
+    """Main function for the client"""
+    client_socket = connect(ip, port)
+    main_menu(client_socket)
+    client_socket.close()
+
+
+if __name__ == "__main__":
+    main("127.0.0.1", 5000)
