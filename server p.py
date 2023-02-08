@@ -16,23 +16,38 @@ def setup_socket():
 
 def handle_login_message(conn, data):
     username, password = data.split("#")[0], data.split("#")[1]
-    result = db.login_check(username, password)
+    message = db.login_check(username, password)
+    result, message = message[0], message[1]
     if result:
-        build_and_send_message(conn, PROTOCOL_SERVER["login_ok_msg"], "")
+        build_and_send_message(conn, PROTOCOL_SERVER["login_ok_msg"], message)
     else:
-        build_and_send_message(conn, PROTOCOL_SERVER["login_failed_msg"], "fails")
+        build_and_send_message(conn, PROTOCOL_SERVER["login_failed_msg"], message)
 
 
-def handle_client_message(client_socket):
+def handle_register_message(conn, data):
+    username, password = data.split("#")[0], data.split("#")[1]
+    message = db.create_user(username, password)
+    result, message = message[0], message[1]
+    if result:
+        build_and_send_message(conn, PROTOCOL_SERVER["register_ok_msg"], message)
+    else:
+        build_and_send_message(conn, PROTOCOL_SERVER["register_failed_msg"], message)
+
+
+def handle_client_message(client_socket, address):
     """Handles messages from a single client"""
     while True:
         cmd, msg = recv_message_and_parse(client_socket)
-        if len(cmd) == 0 or len(msg) == 0:
-            print("~connection stopped~")
+        print(cmd, msg, address)
+        if cmd == ERROR or msg == ERROR:
+            print(f"~connection stopped {address}~")
             client_socket.close()
             break
         elif cmd == "LOGIN":
             handle_login_message(client_socket, msg)
+        elif cmd == "REGISTER":
+            handle_register_message(client_socket, msg)
+
     client_socket.close()
 
 
@@ -43,7 +58,7 @@ def main():
     while True:
         client_socket, address = server_socket.accept()
         print(f"Client connected from {address}")
-        client_thread = threading.Thread(target=handle_client_message, args=(client_socket, ))
+        client_thread = threading.Thread(target=handle_client_message, args=(client_socket, address))
         client_thread.start()
 
 

@@ -10,21 +10,12 @@ DELIMITER = "|"  # Delimiter character in protocol
 DATA_DELIMITER = '#'
 PROTOCOL_CLIENT = {'login_msg': 'LOGIN',
                    'logout_msg': 'LOGOUT',
-                   'getscore_msg': 'MY_SCORE',
-                   'getlogged_msg': 'LOGGED',
-                   'gethighscore_msg': 'HIGHSCORE',
-                   'getquestion_msg': 'GET_QUESTION',
-                   'sendanswer_msg': 'SEND_ANSWER'}
+                   'register_msg': "REGISTER"}
 PROTOCOL_SERVER = {'login_ok_msg': 'LOGIN_OK',
                    'login_failed_msg': 'ERROR',
-                   'yourscore_msg': 'YOUR_SCORE',
-                   'highscore_msg': 'ALL_SCORE',
-                   'logged_msg': 'LOGGED_ANSWER',
-                   'correct_msg': 'CORRECT_ANSWER',
-                   'wrong_msg': 'WRONG_ANSWER',
-                   'question_msg': 'YOUR_QUESTION',
-                   'error_msg': 'ERROR',
-                   'noquestions_msg': 'NO_QUESTIONS'}
+                   'register_ok_msg': "REGISTER_OK",
+                   'register_failed_msg': "ERROR",
+                   'error_msg': 'ERROR'}
 ERROR = None
 
 
@@ -46,6 +37,8 @@ def build_message(cmd, data):
 
 
 def parse_message(full_msg):
+    if len(full_msg) == 0:
+        return ERROR, ERROR
     full_msg = decrypt(full_msg).decode()
     if len(full_msg) < CMD_FIELD_LENGTH + 1 + LENGTH_FIELD_LENGTH + 1:
         return ERROR, ERROR

@@ -55,7 +55,6 @@ clock = pygame.time.Clock()
 
 def bj_screen():
     screen.blit(overlay, (0, 0))
-
     draw_text("BlackJack", MainScreenFont, (255, 255, 255), screen, display_width // 2, 120 // 2)
     draw_text("By Harel Asher", LowFont, (255, 255, 255), screen, display_width // 2, 220 // 2)
 
@@ -227,9 +226,12 @@ def register_menu(conn):
                 elif password_button.collidepoint(event.pos):
                     active_password = True
                 elif enter_button.collidepoint(event.pos):
-                    result = enter_func(username_txt, password_txt, "register")
-                    if result:
+                    cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["register_msg"],
+                                                     username_txt + DATA_DELIMITER + password_txt)
+                    if cmd == 'REGISTER_OK':
                         loggedin_menu(conn)
+                    else:
+                        print(msg)
                 if not username_button.collidepoint(event.pos):
                     active_username = False
                 if not password_button.collidepoint(event.pos):
@@ -291,9 +293,9 @@ def loggedin_menu(conn):
                     sys.exit()
             if event.type == MOUSEBUTTONDOWN:
                 if play_button.collidepoint(event.pos):
-                    pass  # main screen
+                    play_menu(conn)
                 if help_button.collidepoint(event.pos):
-                    pass  # help screen
+                    help_menu(conn)
                 if logout_button.collidepoint(event.pos):
                     LoggedIn = False
                     main_menu(conn)
@@ -309,7 +311,19 @@ def loggedin_menu(conn):
 
 
 def play_menu(conn):
-    pass
+    while True:
+        screen.fill((0, 0, 0))
+
+        pygame.display.update()
+        clock.tick(120)
+
+
+def help_menu(conn):
+    while True:
+        screen.fill((0, 0, 0))
+
+        pygame.display.update()
+        clock.tick(120)
 
 
 def connect(ip, port):

@@ -1,17 +1,14 @@
 # Import module
 import sqlite3
 import datetime
-import time
 
 DatabasePath = 'blackjack.db'
-st = time.time()
 
 
 class Database:
     def __init__(self):
         self.conn = sqlite3.connect(DatabasePath, check_same_thread=False)
         self.cursor = self.conn.cursor()
-        self.cursor.execute("PRAGMA key='secret-key'")
         self.cursor.execute(
             """CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY, 
@@ -30,11 +27,11 @@ class Database:
                                     VALUES (?,?,?,?,?)""",
                                     (username, password, 100000, 100000, datetime.datetime.now()))
                 self.conn.commit()
-                return True
+                return True, ""
             else:
-                return False
+                return False, "This Username Is Already Taken"
         else:
-            return False
+            return False, "Username And Password Length Should Be At Least 3 Characters And Less Than 10"
 
     def delete_user(self, username):
         self.cursor.execute("DELETE FROM users WHERE username = ?", (username,))
@@ -60,9 +57,9 @@ class Database:
         self.cursor.execute("SELECT * FROM users WHERE username=? and password=?", (username, password))
         user = self.cursor.fetchone()
         if user:
-            return True
+            return True, f"{username} logged in"
         else:
-            return False
+            return False, f"The Username Or Password Is Not Correct"
 
     def check_date(self):
         pass
@@ -70,14 +67,6 @@ class Database:
     def __del__(self):
         self.conn.close()
 
-
-db = Database()
-db.create_user("rest", "esadg")
-et = time.time()
-
-# get the execution time
-elapsed_time = et - st
-print('Execution time:', elapsed_time, 'seconds')
 
 #######################################################################################################################
 '''
@@ -92,6 +81,7 @@ add a protocol that goes over tcp. he builds and parses the messages that sent t
 #######################################################################################################################
 '''
 add is_online to user Database
+add picture to user Database
 '''
 #######################################################################################################################
 '''
