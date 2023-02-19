@@ -4,12 +4,13 @@ from DB_Class import *
 from t import *
 
 db = Database()
+db.make_all_users_offline()
 
 
 def setup_socket():
     """Creates and sets up the socket"""
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(("0.0.0.0", 5000))
+    server_socket.bind(("0.0.0.0", 51235))
     server_socket.listen(5)
     return server_socket
 
@@ -19,9 +20,15 @@ def handle_login_message(conn, data):
     message = db.login_check(username, password)
     result, message = message[0], message[1]
     if result:
-        build_and_send_message(conn, PROTOCOL_SERVER["login_ok_msg"], message)
+        print(db.get_user_info(username))
+        build_and_send_message(conn, PROTOCOL_SERVER["login_ok_msg"], str(db.get_user_info(username)))
     else:
         build_and_send_message(conn, PROTOCOL_SERVER["login_failed_msg"], message)
+
+
+def handle_logout_message(username):
+    db.logout(username)
+    print(f'logout username /{username}/ OK')
 
 
 def handle_register_message(conn, data):
@@ -29,7 +36,7 @@ def handle_register_message(conn, data):
     message = db.create_user(username, password)
     result, message = message[0], message[1]
     if result:
-        build_and_send_message(conn, PROTOCOL_SERVER["register_ok_msg"], message)
+        build_and_send_message(conn, PROTOCOL_SERVER["register_ok_msg"], str(db.get_user_info(username)))
     else:
         build_and_send_message(conn, PROTOCOL_SERVER["register_failed_msg"], message)
 
@@ -47,6 +54,8 @@ def handle_client_message(client_socket, address):
             handle_login_message(client_socket, msg)
         elif cmd == "REGISTER":
             handle_register_message(client_socket, msg)
+        elif cmd == "LOGOUT":
+            handle_logout_message(msg)
 
     client_socket.close()
 

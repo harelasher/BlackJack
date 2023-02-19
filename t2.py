@@ -1,48 +1,53 @@
-import pygame
-pygame.init()
+import random
 
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-RED = (255, 0, 0)
-GREEN = (0, 255, 0)
-BLUE = (0, 0, 255, 50)  # This color contains an extra integer. It's the alpha value.
-PURPLE = (255, 0, 255)
+import pygame as pg
+from pygame.math import Vector2
 
-screen = pygame.display.set_mode((200, 325))
-screen.fill(WHITE)  # Make the background white. Remember that the screen is a Surface!
-clock = pygame.time.Clock()
 
-size = (50, 50)
-red_image = pygame.Surface(size)
-green_image = pygame.Surface(size)
-blue_image = pygame.Surface(size, pygame.SRCALPHA)  # Contains a flag telling pygame that the Surface is per-pixel alpha
-purple_image = pygame.Surface(size)
+class Projectile(pg.sprite.Sprite):
 
-red_image.set_colorkey(BLACK)
-green_image.set_alpha(50)
-# For the 'blue_image' it's the alpha value of the color that's been drawn to each pixel that determines transparency.
-purple_image.set_colorkey(BLACK)
-purple_image.set_alpha(50)
+    def __init__(self, pos, game_area):
+        super().__init__()
+        self.image = pg.Surface((5, 5))
+        self.image.fill(pg.Color('aquamarine2'))
+        self.rect = self.image.get_rect(center=pos)
+        self.vel = Vector2(2, 0).rotate(random.randrange(360))
+        self.pos = Vector2(pos)
+        self.game_area = game_area
 
-pygame.draw.rect(red_image, RED, red_image.get_rect(), 10)
-pygame.draw.rect(green_image, GREEN, green_image.get_rect(), 10)
-pygame.draw.rect(blue_image, BLUE, blue_image.get_rect(), 10)
-pygame.draw.rect(purple_image, PURPLE, purple_image.get_rect(), 10)
+    def update(self):
+        self.pos += self.vel
+        self.rect.center = self.pos
+        if not self.game_area.contains(self.rect):
+            self.kill()
 
-while True:
-    clock.tick(60)
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            quit()
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_1:
-                screen.blit(red_image, (75, 25))
-            elif event.key == pygame.K_2:
-                screen.blit(green_image, (75, 100))
-            elif event.key == pygame.K_3:
-                screen.blit(blue_image, (75, 175))
-            elif event.key == pygame.K_4:
-                screen.blit(purple_image, (75, 250))
+def main():
+    screen = pg.display.set_mode((640, 480))
+    game_area = pg.Rect(60, 60, 520, 360)
+    game_area_color = pg.Color('aquamarine2')
+    clock = pg.time.Clock()
+    all_sprites = pg.sprite.Group(Projectile(game_area.center, game_area))
 
-    pygame.display.update()
+    done = False
+
+    while not done:
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                done = True
+
+        all_sprites.add(Projectile(game_area.center, game_area))
+        all_sprites.update()
+
+        screen.fill((30, 30, 30))
+        all_sprites.draw(screen)
+        pg.draw.rect(screen, game_area_color, game_area, 2)
+
+        pg.display.flip()
+        clock.tick(60)
+
+
+if __name__ == '__main__':
+    pg.init()
+    main()
+    pg.quit()

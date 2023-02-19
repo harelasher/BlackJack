@@ -1,6 +1,7 @@
 # Import module
 import sqlite3
 import datetime
+import random
 
 DatabasePath = 'blackjack.db'
 
@@ -15,17 +16,21 @@ class Database:
             username TEXT, 
             password TEXT, 
             score INTEGER, 
-            highscore INTEGER, 
-            last_seen TIMESTAMP)""")
+            highscore INTEGER,
+            pfp_pic INTEGER, 
+            last_seen TIMESTAMP,
+            is_online BOOL)""")
         self.conn.commit()
 
-    def create_user(self, username, password):  # register the user
+    def create_user(self, username, password):
         if 3 <= len(username) < 10 and 3 <= len(password) < 10:
             self.cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
             if self.cursor.fetchone() is None:
-                self.cursor.execute("""INSERT INTO users (username, password, score, highscore,last_seen)
-                                    VALUES (?,?,?,?,?)""",
-                                    (username, password, 100000, 100000, datetime.datetime.now()))
+                # Randomly select a profile picture between four options
+                pfp_pic = random.randint(0, 3)
+                self.cursor.execute("""INSERT INTO users (username, password, score, highscore, pfp_pic, last_seen, is_online)
+                                    VALUES (?,?,?,?,?,?,?)""",
+                                    (username, password, 100000, 100000, pfp_pic, datetime.datetime.now(), 1))
                 self.conn.commit()
                 return True, ""
             else:
@@ -53,13 +58,34 @@ class Database:
             self.cursor.execute("UPDATE users SET highscore=? WHERE username=?", (current_score, username))
             self.conn.commit()
 
-    def login_check(self, username, password):  # login for user
-        self.cursor.execute("SELECT * FROM users WHERE username=? and password=?", (username, password))
+    def login_check(self, username, password):
+        self.cursor.execute("SELECT * FROM users WHERE username=? and password=? and is_online=0", (username, password))
         user = self.cursor.fetchone()
         if user:
+            self.cursor.execute("UPDATE users SET is_online=1 WHERE username=?", (username,))
+            self.conn.commit()
             return True, f"{username} logged in"
         else:
-            return False, f"The Username Or Password Is Not Correct"
+            return False, f"The username is already online or the username and password combination is not correct"
+
+    def logout(self, username):
+        self.cursor.execute("UPDATE users SET is_online=0 WHERE username=?", (username,))
+        self.conn.commit()
+        return True
+
+    def get_user_info(self, username):
+        self.cursor.execute(
+            "SELECT id, username, score, highscore, pfp_pic, last_seen, is_online FROM users WHERE username=?",
+            (username,))
+        user_info = self.cursor.fetchone()
+        if user_info:
+            return user_info
+        else:
+            return False
+
+    def make_all_users_offline(self):
+        self.cursor.execute("UPDATE users SET is_online=0")
+        self.conn.commit()
 
     def check_date(self):
         pass
@@ -69,24 +95,4 @@ class Database:
 
 
 #######################################################################################################################
-'''
-This code does not consider security measures for login,
-such as salting and hashing passwords,
-which is a must for any production system.
-'''
-'''
-add a protocol that goes over tcp. he builds and parses the messages that sent to the socket.
-(encrypted too)
-'''
-#######################################################################################################################
-'''
-add is_online to user Database
-add picture to user Database
-'''
-#######################################################################################################################
-'''
-add login and register error message - username and password are not in the right letters range(3-9)
-username is already taken
-for login checks if the username checks out for the password
-'''
 #######################################################################################################################
