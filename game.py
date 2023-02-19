@@ -403,11 +403,87 @@ def play_menu(conn, user_info):
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if blackjack_rect.collidepoint(event.pos) and \
                         BlackJack_mask.get_at((event.pos[0] - blackjack_rect.x, event.pos[1] - blackjack_rect.y)):
-                    loggedin_menu(conn, user_info)
+                    return
                 if Highlighted_pfp_pic_rect.collidepoint(event.pos) and \
                         pfp_pic_mask.get_at(
                             (event.pos[0] - Highlighted_pfp_pic_rect.x, event.pos[1] - Highlighted_pfp_pic_rect.y)):
-                    draw_text("click", ButtonFont, "black", screen, 400, 400)
+                    profile_menu(conn, user_info)
+                if Highlighted_podium_rect.collidepoint(event.pos) and \
+                        Highlighted_podium_mask.get_at(
+                            (event.pos[0] - Highlighted_podium_rect.x, event.pos[1] - Highlighted_podium_rect.y)):
+                    draw_text("click", ButtonFont, "black", screen, 400, 300)
+            if event.type == pygame.QUIT:
+                build_and_send_message(conn, PROTOCOL_CLIENT["logout_msg"], user_info[1])
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    return
+        pygame.display.update()
+        clock.tick(120)
+
+
+def profile_menu(conn, user_info):
+    screen.blit(overlay, (0, 0))
+    draw_text("BlackJack", MainScreenFont, (255, 255, 255), screen, display_width // 2, 120 // 2)
+    draw_text(f"chips: {user_info[2]}", HelveticaFont, (255, 255, 255), screen, display_width // 2, 215 // 2)
+
+    pfp_pic = pfp_pictures[user_info[4]]
+    pfp_pic_rect = pfp_pic.get_rect()
+    pfp_pic_rect.center = (display_width / 1.075, 120 // 2)
+    screen.blit(pfp_pic, pfp_pic_rect)
+
+    Highlighted_pfp_pic = Highlighted_pfp[user_info[4]]
+    Highlighted_pfp_pic_rect = Highlighted_pfp_pic.get_rect()
+    Highlighted_pfp_pic_rect.center = (display_width / 1.075, 120 // 2)
+    pfp_pic_mask = pygame.mask.from_surface(Highlighted_pfp_pic)
+
+    podium_rect = podium.get_rect()
+    podium_rect.center = (display_width / 1.25, 120 // 2)
+    screen.blit(podium, podium_rect)
+
+    Highlighted_podium_rect = Highlighted_podium.get_rect()
+    Highlighted_podium_rect.center = (display_width / 1.25, 120 // 2)
+    Highlighted_podium_mask = pygame.mask.from_surface(Highlighted_podium)
+
+    bj_txt = render1('BlackJack', MainScreenFont)
+    blackjack_rect = bj_txt.get_rect()
+    blackjack_rect.center = (display_width // 2, 120 // 2)
+    BlackJack_mask = pygame.mask.from_surface(bj_txt)
+
+    screen.blit(pygame.transform.scale(pfp_pic, (250, 250)), (40, 140))
+    play_button = pygame.Rect(50, 400, 210, 45)
+    pygame.draw.rect(screen, "black", play_button)
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.MOUSEMOTION:
+                if blackjack_rect.collidepoint(event.pos) and \
+                        BlackJack_mask.get_at((event.pos[0] - blackjack_rect.x, event.pos[1] - blackjack_rect.y)):
+                    screen.blit(bj_txt, blackjack_rect)
+                elif Highlighted_pfp_pic_rect.collidepoint(event.pos) and \
+                        pfp_pic_mask.get_at(
+                            (event.pos[0] - Highlighted_pfp_pic_rect.x, event.pos[1] - Highlighted_pfp_pic_rect.y)):
+                    screen.blit(Highlighted_pfp_pic, Highlighted_pfp_pic_rect)
+                elif Highlighted_podium_rect.collidepoint(event.pos) and \
+                        Highlighted_podium_mask.get_at(
+                            (event.pos[0] - Highlighted_podium_rect.x, event.pos[1] - Highlighted_podium_rect.y)):
+                    screen.blit(Highlighted_podium, Highlighted_podium_rect)
+                else:
+                    screen.blit(overlay, (0, 0))
+                    draw_text("BlackJack", MainScreenFont, (255, 255, 255), screen, display_width // 2, 120 // 2)
+                    draw_text(f"chips: {user_info[2]}", HelveticaFont, (255, 255, 255), screen, display_width // 2,
+                              215 // 2)
+                    screen.blit(pfp_pic, pfp_pic_rect)
+                    screen.blit(podium, podium_rect)
+                    screen.blit(pygame.transform.scale(pfp_pic, (250, 250)), (40, 140))
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if blackjack_rect.collidepoint(event.pos) and \
+                        BlackJack_mask.get_at((event.pos[0] - blackjack_rect.x, event.pos[1] - blackjack_rect.y)):
+                    return
+                # if Highlighted_pfp_pic_rect.collidepoint(event.pos) and \
+                #         pfp_pic_mask.get_at(
+                #             (event.pos[0] - Highlighted_pfp_pic_rect.x, event.pos[1] - Highlighted_pfp_pic_rect.y)):
+                #     draw_text("click", ButtonFont, "black", screen, 400, 400)
                 if Highlighted_podium_rect.collidepoint(event.pos) and \
                         Highlighted_podium_mask.get_at(
                             (event.pos[0] - Highlighted_podium_rect.x, event.pos[1] - Highlighted_podium_rect.y)):
