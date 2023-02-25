@@ -4,6 +4,7 @@ import string
 import socket
 from t import *
 import ast
+import time
 
 # available chars for the username/password
 available_chars = string.ascii_lowercase + string.digits + string.punctuation
@@ -182,6 +183,18 @@ def login_menu(conn):
         draw_text(password_txt, ButtonFont, (255, 255, 255), screen, password_button.x + password_button.w // 2,
                   password_button.y + password_button.h // 2)
 
+        if active_username:
+            txt = ButtonFont.render(username_txt, True, (255, 255, 255))
+            rect = txt.get_rect()
+            rect.center = (username_button.x + username_button.w // 2,
+                           username_button.y + username_button.h // 2)
+        else:
+            txt = ButtonFont.render(password_txt, True, (255, 255, 255))
+            rect = txt.get_rect()
+            rect.center = (password_button.x + password_button.w // 2,
+                           password_button.y + password_button.h // 2)
+        cursor = pygame.Rect(rect.topright, (3, rect.height))
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -218,6 +231,8 @@ def login_menu(conn):
                     elif len(password_txt) < 9 and event.unicode.lower() in available_chars:
                         password_txt += event.unicode.lower()
 
+        if time.time() % 1 > 0.5 and (active_username or active_password):
+            pygame.draw.rect(screen, 'white', cursor)
         pygame.display.update()
         clock.tick(120)
 
@@ -253,6 +268,18 @@ def register_menu(conn):
                   username_button.y + username_button.h // 2)
         draw_text(password_txt, ButtonFont, (255, 255, 255), screen, password_button.x + password_button.w // 2,
                   password_button.y + password_button.h // 2)
+
+        if active_username:
+            txt = ButtonFont.render(username_txt, True, (255, 255, 255))
+            rect = txt.get_rect()
+            rect.center = (username_button.x + username_button.w // 2,
+                           username_button.y + username_button.h // 2)
+        else:
+            txt = ButtonFont.render(password_txt, True, (255, 255, 255))
+            rect = txt.get_rect()
+            rect.center = (password_button.x + password_button.w // 2,
+                           password_button.y + password_button.h // 2)
+        cursor = pygame.Rect(rect.topright, (3, rect.height))
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -290,6 +317,8 @@ def register_menu(conn):
                     elif len(password_txt) < 9 and event.unicode.lower() in available_chars:
                         password_txt += event.unicode.lower()
 
+        if time.time() % 1 > 0.5 and (active_username or active_password):
+            pygame.draw.rect(screen, 'white', cursor)
         pygame.display.update()
         clock.tick(120)
 
@@ -451,9 +480,9 @@ def profile_menu(conn, user_info):
     blackjack_rect.center = (display_width // 2, 120 // 2)
     BlackJack_mask = pygame.mask.from_surface(bj_txt)
 
-    screen.blit(pygame.transform.scale(pfp_pic, (250, 250)), (40, 140))
-    play_button = pygame.Rect(50, 400, 210, 45)
-    pygame.draw.rect(screen, "black", play_button)
+    screen.blit(pygame.transform.scale(pfp_pic, (250, 250)), (40, 150))
+    play_button = pygame.Rect(85, 415, 160, 45)
+    pygame.draw.rect(screen, "white", play_button)
     while True:
         for event in pygame.event.get():
             if event.type == pygame.MOUSEMOTION:
@@ -475,7 +504,8 @@ def profile_menu(conn, user_info):
                               215 // 2)
                     screen.blit(pfp_pic, pfp_pic_rect)
                     screen.blit(podium, podium_rect)
-                    screen.blit(pygame.transform.scale(pfp_pic, (250, 250)), (40, 140))
+                    screen.blit(pygame.transform.scale(pfp_pic, (250, 250)), (40, 150))
+                    pygame.draw.rect(screen, "white", play_button)
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if blackjack_rect.collidepoint(event.pos) and \
                         BlackJack_mask.get_at((event.pos[0] - blackjack_rect.x, event.pos[1] - blackjack_rect.y)):
