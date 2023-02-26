@@ -183,17 +183,19 @@ def login_menu(conn):
         draw_text(password_txt, ButtonFont, (255, 255, 255), screen, password_button.x + password_button.w // 2,
                   password_button.y + password_button.h // 2)
 
+        cursor = pygame.Rect((0, 0), (0, 0))
         if active_username:
             txt = ButtonFont.render(username_txt, True, (255, 255, 255))
             rect = txt.get_rect()
             rect.center = (username_button.x + username_button.w // 2,
                            username_button.y + username_button.h // 2)
-        else:
+            cursor = pygame.Rect(rect.topright, (3, rect.height))
+        elif active_password:
             txt = ButtonFont.render(password_txt, True, (255, 255, 255))
             rect = txt.get_rect()
             rect.center = (password_button.x + password_button.w // 2,
                            password_button.y + password_button.h // 2)
-        cursor = pygame.Rect(rect.topright, (3, rect.height))
+            cursor = pygame.Rect(rect.topright, (3, rect.height))
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -269,17 +271,19 @@ def register_menu(conn):
         draw_text(password_txt, ButtonFont, (255, 255, 255), screen, password_button.x + password_button.w // 2,
                   password_button.y + password_button.h // 2)
 
+        cursor = pygame.Rect((0, 0), (0, 0))
         if active_username:
             txt = ButtonFont.render(username_txt, True, (255, 255, 255))
             rect = txt.get_rect()
             rect.center = (username_button.x + username_button.w // 2,
                            username_button.y + username_button.h // 2)
-        else:
+            cursor = pygame.Rect(rect.topright, (3, rect.height))
+        elif active_password:
             txt = ButtonFont.render(password_txt, True, (255, 255, 255))
             rect = txt.get_rect()
             rect.center = (password_button.x + password_button.w // 2,
                            password_button.y + password_button.h // 2)
-        cursor = pygame.Rect(rect.topright, (3, rect.height))
+            cursor = pygame.Rect(rect.topright, (3, rect.height))
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -485,6 +489,7 @@ def profile_menu(conn, user_info):
     pygame.draw.rect(screen, "white", play_button)
     while True:
         for event in pygame.event.get():
+            print(event)
             if event.type == pygame.MOUSEMOTION:
                 if blackjack_rect.collidepoint(event.pos) and \
                         BlackJack_mask.get_at((event.pos[0] - blackjack_rect.x, event.pos[1] - blackjack_rect.y)):
