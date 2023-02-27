@@ -2,7 +2,7 @@
 import sqlite3
 import datetime
 import random
-
+from t import encrypt, decrypt
 DatabasePath = 'blackjack.db'
 
 
@@ -19,7 +19,8 @@ class Database:
             highscore INTEGER,
             pfp_pic INTEGER, 
             last_seen TIMESTAMP,
-            is_online BOOL)""")
+            is_online BOOL,
+            WinLossPush TEXT)""")
         self.conn.commit()
 
     def create_user(self, username, password):
@@ -28,9 +29,9 @@ class Database:
             if self.cursor.fetchone() is None:
                 # Randomly select a profile picture between four options
                 pfp_pic = random.randint(0, 3)
-                self.cursor.execute("""INSERT INTO users (username, password, score, highscore, pfp_pic, last_seen, is_online)
-                                    VALUES (?,?,?,?,?,?,?)""",
-                                    (username, password, 100000, 100000, pfp_pic, datetime.datetime.now(), 1))
+                self.cursor.execute("""INSERT INTO users (username, password, score, highscore, pfp_pic, last_seen, is_online, WinLossPush)
+                                    VALUES (?,?,?,?,?,?,?,?)""",
+                                    (username, encrypt(password), 100000, 100000, pfp_pic, datetime.datetime.now(), 1, "0/0/0"))
                 self.conn.commit()
                 return True, ""
             else:
@@ -59,9 +60,9 @@ class Database:
             self.conn.commit()
 
     def login_check(self, username, password):
-        self.cursor.execute("SELECT * FROM users WHERE username=? and password=? and is_online=0", (username, password))
-        user = self.cursor.fetchone()
-        if user:
+        self.cursor.execute("SELECT password FROM users WHERE username=? and is_online=0", (username, ))
+        password_enc = self.cursor.fetchone()[0]
+        if decrypt(password_enc).decode() == password:
             self.cursor.execute("UPDATE users SET is_online=1 WHERE username=?", (username,))
             self.conn.commit()
             return True, f"{username} logged in"
@@ -75,7 +76,7 @@ class Database:
 
     def get_user_info(self, username):
         self.cursor.execute(
-            "SELECT id, username, score, highscore, pfp_pic, last_seen, is_online FROM users WHERE username=?",
+            "SELECT id, username, score, highscore, pfp_pic, last_seen, is_online, WinLossPush FROM users WHERE username=?",
             (username,))
         user_info = self.cursor.fetchone()
         if user_info:

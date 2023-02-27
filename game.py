@@ -7,14 +7,28 @@ import ast
 import time
 
 # available chars for the username/password
-available_chars = string.ascii_lowercase + string.digits + string.punctuation
+available_chars = string.ascii_lowercase + string.digits
 
 
 # (rect_x + rect_width // 2, rect_y + rect_height // 2) -->
-def draw_text(text, font, color, surface, x, y, ):
+def draw_text(text, font, color, surface, x, y):
     textobj = font.render(text, 1, color)
     textrect = textobj.get_rect()
     textrect.center = (x, y)
+    surface.blit(textobj, textrect)
+
+
+def draw_text_Left(text, font, color, surface, x, y, ):
+    textobj = font.render(text, 1, color)
+    textrect = textobj.get_rect()
+    textrect.topleft = (x, y)
+    surface.blit(textobj, textrect)
+
+
+def draw_text_Right(text, font, color, surface, x, y, ):
+    textobj = font.render(text, 1, color)
+    textrect = textobj.get_rect()
+    textrect.topright = (x, y)
     surface.blit(textobj, textrect)
 
 
@@ -156,10 +170,6 @@ def login_menu(conn):
     active_password = False
     username_txt = ""
     password_txt = ""
-
-    # if LoggedIn:
-    #     loggedin_menu(conn)
-
     while True:
         bj_screen()
 
@@ -386,53 +396,61 @@ def loggedin_menu(conn, user_info):
 
 
 def play_menu(conn, user_info):
-    screen.blit(overlay, (0, 0))
-    draw_text("BlackJack", MainScreenFont, (255, 255, 255), screen, display_width // 2, 120 // 2)
-    draw_text(f"chips: {user_info[2]}", HelveticaFont, (255, 255, 255), screen, display_width // 2, 215 // 2)
-
-    pfp_pic = pfp_pictures[user_info[4]]
-    pfp_pic_rect = pfp_pic.get_rect()
-    pfp_pic_rect.center = (display_width / 1.075, 120 // 2)
-    screen.blit(pfp_pic, pfp_pic_rect)
-
-    Highlighted_pfp_pic = Highlighted_pfp[user_info[4]]
-    Highlighted_pfp_pic_rect = Highlighted_pfp_pic.get_rect()
-    Highlighted_pfp_pic_rect.center = (display_width / 1.075, 120 // 2)
-    pfp_pic_mask = pygame.mask.from_surface(Highlighted_pfp_pic)
-
-    podium_rect = podium.get_rect()
-    podium_rect.center = (display_width / 1.25, 120 // 2)
-    screen.blit(podium, podium_rect)
-
-    Highlighted_podium_rect = Highlighted_podium.get_rect()
-    Highlighted_podium_rect.center = (display_width / 1.25, 120 // 2)
-    Highlighted_podium_mask = pygame.mask.from_surface(Highlighted_podium)
-
-    bj_txt = render1('BlackJack', MainScreenFont)
-    blackjack_rect = bj_txt.get_rect()
-    blackjack_rect.center = (display_width // 2, 120 // 2)
-    BlackJack_mask = pygame.mask.from_surface(bj_txt)
+    highlighted_podium_true = False
+    highlighted_pfp_pic_true = False
+    bj_txt_true = False
     while True:
+        screen.blit(overlay, (0, 0))
+        draw_text("BlackJack", MainScreenFont, (255, 255, 255), screen, display_width // 2, 120 // 2)
+        draw_text(f"chips: {user_info[2]}", HelveticaFont, (255, 255, 255), screen, display_width // 2, 215 // 2)
+
+        pfp_pic = pfp_pictures[user_info[4]]
+        pfp_pic_rect = pfp_pic.get_rect()
+        pfp_pic_rect.center = (display_width / 1.075, 120 // 2)
+        screen.blit(pfp_pic, pfp_pic_rect)
+
+        Highlighted_pfp_pic = Highlighted_pfp[user_info[4]]
+        Highlighted_pfp_pic_rect = Highlighted_pfp_pic.get_rect()
+        Highlighted_pfp_pic_rect.center = (display_width / 1.075, 120 // 2)
+        pfp_pic_mask = pygame.mask.from_surface(Highlighted_pfp_pic)
+        if highlighted_pfp_pic_true:
+            screen.blit(Highlighted_pfp_pic, Highlighted_pfp_pic_rect)
+
+        podium_rect = podium.get_rect()
+        podium_rect.center = (display_width / 1.25, 120 // 2)
+        screen.blit(podium, podium_rect)
+
+        Highlighted_podium_rect = Highlighted_podium.get_rect()
+        Highlighted_podium_rect.center = (display_width / 1.25, 120 // 2)
+        Highlighted_podium_mask = pygame.mask.from_surface(Highlighted_podium)
+        if highlighted_podium_true:
+            screen.blit(Highlighted_podium, Highlighted_podium_rect)
+
+        bj_txt = render1('BlackJack', MainScreenFont)
+        blackjack_rect = bj_txt.get_rect()
+        blackjack_rect.center = (display_width // 2, 120 // 2)
+        BlackJack_mask = pygame.mask.from_surface(bj_txt)
+        if bj_txt_true:
+            screen.blit(bj_txt, blackjack_rect)
         for event in pygame.event.get():
             if event.type == pygame.MOUSEMOTION:
                 if blackjack_rect.collidepoint(event.pos) and \
                         BlackJack_mask.get_at((event.pos[0] - blackjack_rect.x, event.pos[1] - blackjack_rect.y)):
-                    screen.blit(bj_txt, blackjack_rect)
-                elif Highlighted_pfp_pic_rect.collidepoint(event.pos) and \
+                    bj_txt_true = True
+                else:
+                    bj_txt_true = False
+                if Highlighted_pfp_pic_rect.collidepoint(event.pos) and \
                         pfp_pic_mask.get_at(
                             (event.pos[0] - Highlighted_pfp_pic_rect.x, event.pos[1] - Highlighted_pfp_pic_rect.y)):
-                    screen.blit(Highlighted_pfp_pic, Highlighted_pfp_pic_rect)
-                elif Highlighted_podium_rect.collidepoint(event.pos) and \
+                    highlighted_pfp_pic_true = True
+                else:
+                    highlighted_pfp_pic_true = False
+                if Highlighted_podium_rect.collidepoint(event.pos) and \
                         Highlighted_podium_mask.get_at(
                             (event.pos[0] - Highlighted_podium_rect.x, event.pos[1] - Highlighted_podium_rect.y)):
-                    screen.blit(Highlighted_podium, Highlighted_podium_rect)
+                    highlighted_podium_true = True
                 else:
-                    screen.blit(overlay, (0, 0))
-                    draw_text("BlackJack", MainScreenFont, (255, 255, 255), screen, display_width // 2, 120 // 2)
-                    draw_text(f"chips: {user_info[2]}", HelveticaFont, (255, 255, 255), screen, display_width // 2,
-                              215 // 2)
-                    screen.blit(pfp_pic, pfp_pic_rect)
-                    screen.blit(podium, podium_rect)
+                    highlighted_podium_true = False
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if blackjack_rect.collidepoint(event.pos) and \
                         BlackJack_mask.get_at((event.pos[0] - blackjack_rect.x, event.pos[1] - blackjack_rect.y)):
@@ -440,10 +458,12 @@ def play_menu(conn, user_info):
                 if Highlighted_pfp_pic_rect.collidepoint(event.pos) and \
                         pfp_pic_mask.get_at(
                             (event.pos[0] - Highlighted_pfp_pic_rect.x, event.pos[1] - Highlighted_pfp_pic_rect.y)):
+                    highlighted_pfp_pic_true = False
                     profile_menu(conn, user_info)
                 if Highlighted_podium_rect.collidepoint(event.pos) and \
                         Highlighted_podium_mask.get_at(
                             (event.pos[0] - Highlighted_podium_rect.x, event.pos[1] - Highlighted_podium_rect.y)):
+                    highlighted_podium_true = False
                     draw_text("click", ButtonFont, "black", screen, 400, 300)
             if event.type == pygame.QUIT:
                 build_and_send_message(conn, PROTOCOL_CLIENT["logout_msg"], user_info[1])
@@ -457,60 +477,85 @@ def play_menu(conn, user_info):
 
 
 def profile_menu(conn, user_info):
-    screen.blit(overlay, (0, 0))
-    draw_text("BlackJack", MainScreenFont, (255, 255, 255), screen, display_width // 2, 120 // 2)
-    draw_text(f"chips: {user_info[2]}", HelveticaFont, (255, 255, 255), screen, display_width // 2, 215 // 2)
-
-    pfp_pic = pfp_pictures[user_info[4]]
-    pfp_pic_rect = pfp_pic.get_rect()
-    pfp_pic_rect.center = (display_width / 1.075, 120 // 2)
-    screen.blit(pfp_pic, pfp_pic_rect)
-
-    Highlighted_pfp_pic = Highlighted_pfp[user_info[4]]
-    Highlighted_pfp_pic_rect = Highlighted_pfp_pic.get_rect()
-    Highlighted_pfp_pic_rect.center = (display_width / 1.075, 120 // 2)
-    pfp_pic_mask = pygame.mask.from_surface(Highlighted_pfp_pic)
-
-    podium_rect = podium.get_rect()
-    podium_rect.center = (display_width / 1.25, 120 // 2)
-    screen.blit(podium, podium_rect)
-
-    Highlighted_podium_rect = Highlighted_podium.get_rect()
-    Highlighted_podium_rect.center = (display_width / 1.25, 120 // 2)
-    Highlighted_podium_mask = pygame.mask.from_surface(Highlighted_podium)
-
-    bj_txt = render1('BlackJack', MainScreenFont)
-    blackjack_rect = bj_txt.get_rect()
-    blackjack_rect.center = (display_width // 2, 120 // 2)
-    BlackJack_mask = pygame.mask.from_surface(bj_txt)
-
-    screen.blit(pygame.transform.scale(pfp_pic, (250, 250)), (40, 150))
-    play_button = pygame.Rect(85, 415, 160, 45)
-    pygame.draw.rect(screen, "white", play_button)
+    highlighted_podium_true = False
+    highlighted_pfp_pic_true = False
+    bj_txt_true = False
     while True:
+        screen.blit(overlay, (0, 0))
+        draw_text("BlackJack", MainScreenFont, (255, 255, 255), screen, display_width // 2, 120 // 2)
+        draw_text(f"chips: {user_info[2]}", HelveticaFont, (255, 255, 255), screen, display_width // 2, 215 // 2)
+
+        pfp_pic = pfp_pictures[user_info[4]]
+        pfp_pic_rect = pfp_pic.get_rect()
+        pfp_pic_rect.center = (display_width / 1.075, 120 // 2)
+        screen.blit(pfp_pic, pfp_pic_rect)
+
+        Highlighted_pfp_pic = Highlighted_pfp[user_info[4]]
+        Highlighted_pfp_pic_rect = Highlighted_pfp_pic.get_rect()
+        Highlighted_pfp_pic_rect.center = (display_width / 1.075, 120 // 2)
+        pfp_pic_mask = pygame.mask.from_surface(Highlighted_pfp_pic)
+        if highlighted_pfp_pic_true:
+            screen.blit(Highlighted_pfp_pic, Highlighted_pfp_pic_rect)
+
+        podium_rect = podium.get_rect()
+        podium_rect.center = (display_width / 1.25, 120 // 2)
+        screen.blit(podium, podium_rect)
+
+        Highlighted_podium_rect = Highlighted_podium.get_rect()
+        Highlighted_podium_rect.center = (display_width / 1.25, 120 // 2)
+        Highlighted_podium_mask = pygame.mask.from_surface(Highlighted_podium)
+        if highlighted_podium_true:
+            screen.blit(Highlighted_podium, Highlighted_podium_rect)
+
+        bj_txt = render1('BlackJack', MainScreenFont)
+        blackjack_rect = bj_txt.get_rect()
+        blackjack_rect.center = (display_width // 2, 120 // 2)
+        BlackJack_mask = pygame.mask.from_surface(bj_txt)
+        if bj_txt_true:
+            screen.blit(bj_txt, blackjack_rect)
+
+        screen.blit(pygame.transform.scale(pfp_pic, (250, 250)), (55, 170))
+        play_button = pygame.Rect(100, 440, 160, 45)
+        pygame.draw.rect(screen, "white", play_button)
+
+        draw_text_Left("username:", HelveticaFont, (255, 255, 255), screen, display_width // 2, 330 // 2)
+        Line1 = pygame.Rect(display_width // 2, 490 // 2, 340, 2)
+        pygame.draw.rect(screen, "white", Line1)
+        draw_text_Right(user_info[1], HelveticaFont, (255, 255, 255), screen, 740, 490 // 2 - 20)
+
+        draw_text_Left("current chips:", HelveticaFont, (255, 255, 255), screen, display_width // 2, 500 // 2)
+        Line2 = pygame.Rect(display_width // 2, 660 // 2, 340, 2)
+        pygame.draw.rect(screen, "white", Line2)
+        draw_text_Right(str(user_info[2]), HelveticaFont, (255, 255, 255), screen, 740, 660 // 2 - 20)
+
+        draw_text_Left("biggest chips amount:", HelveticaFont, (255, 255, 255), screen, display_width // 2, 670 // 2)
+        Line3 = pygame.Rect(display_width // 2, 830 // 2, 340, 2)
+        pygame.draw.rect(screen, "white", Line3)
+        draw_text_Right(str(user_info[3]), HelveticaFont, (255, 255, 255), screen, 740, 830 // 2 - 20)
+
+        draw_text_Left("win/loss/push:", HelveticaFont, (255, 255, 255), screen, display_width // 2, 840 // 2)
+        Line3 = pygame.Rect(display_width // 2, 1000 // 2, 340, 2)
+        pygame.draw.rect(screen, "white", Line3)
+        draw_text_Right(user_info[7], HelveticaFont, (255, 255, 255), screen, 740, 1000 // 2 - 20)
         for event in pygame.event.get():
-            print(event)
             if event.type == pygame.MOUSEMOTION:
                 if blackjack_rect.collidepoint(event.pos) and \
                         BlackJack_mask.get_at((event.pos[0] - blackjack_rect.x, event.pos[1] - blackjack_rect.y)):
-                    screen.blit(bj_txt, blackjack_rect)
-                elif Highlighted_pfp_pic_rect.collidepoint(event.pos) and \
+                    bj_txt_true = True
+                else:
+                    bj_txt_true = False
+                if Highlighted_pfp_pic_rect.collidepoint(event.pos) and \
                         pfp_pic_mask.get_at(
                             (event.pos[0] - Highlighted_pfp_pic_rect.x, event.pos[1] - Highlighted_pfp_pic_rect.y)):
-                    screen.blit(Highlighted_pfp_pic, Highlighted_pfp_pic_rect)
-                elif Highlighted_podium_rect.collidepoint(event.pos) and \
+                    highlighted_pfp_pic_true = True
+                else:
+                    highlighted_pfp_pic_true = False
+                if Highlighted_podium_rect.collidepoint(event.pos) and \
                         Highlighted_podium_mask.get_at(
                             (event.pos[0] - Highlighted_podium_rect.x, event.pos[1] - Highlighted_podium_rect.y)):
-                    screen.blit(Highlighted_podium, Highlighted_podium_rect)
+                    highlighted_podium_true = True
                 else:
-                    screen.blit(overlay, (0, 0))
-                    draw_text("BlackJack", MainScreenFont, (255, 255, 255), screen, display_width // 2, 120 // 2)
-                    draw_text(f"chips: {user_info[2]}", HelveticaFont, (255, 255, 255), screen, display_width // 2,
-                              215 // 2)
-                    screen.blit(pfp_pic, pfp_pic_rect)
-                    screen.blit(podium, podium_rect)
-                    screen.blit(pygame.transform.scale(pfp_pic, (250, 250)), (40, 150))
-                    pygame.draw.rect(screen, "white", play_button)
+                    highlighted_podium_true = False
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if blackjack_rect.collidepoint(event.pos) and \
                         BlackJack_mask.get_at((event.pos[0] - blackjack_rect.x, event.pos[1] - blackjack_rect.y)):
