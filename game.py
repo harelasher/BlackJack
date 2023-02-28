@@ -521,22 +521,22 @@ def profile_menu(conn, user_info):
         draw_text_Left("username:", HelveticaFont, (255, 255, 255), screen, display_width // 2, 330 // 2)
         Line1 = pygame.Rect(display_width // 2, 490 // 2, 340, 2)
         pygame.draw.rect(screen, "white", Line1)
-        draw_text_Right(user_info[1], HelveticaFont, (255, 255, 255), screen, 740, 490 // 2 - 20)
+        draw_text_Right(user_info[1], HelveticaFont, (255, 255, 255), screen, 740, 490 // 2 - 22)
 
         draw_text_Left("current chips:", HelveticaFont, (255, 255, 255), screen, display_width // 2, 500 // 2)
         Line2 = pygame.Rect(display_width // 2, 660 // 2, 340, 2)
         pygame.draw.rect(screen, "white", Line2)
-        draw_text_Right(str(user_info[2]), HelveticaFont, (255, 255, 255), screen, 740, 660 // 2 - 20)
+        draw_text_Right(str(user_info[2]), HelveticaFont, (255, 255, 255), screen, 740, 660 // 2 - 22)
 
         draw_text_Left("biggest chips amount:", HelveticaFont, (255, 255, 255), screen, display_width // 2, 670 // 2)
         Line3 = pygame.Rect(display_width // 2, 830 // 2, 340, 2)
         pygame.draw.rect(screen, "white", Line3)
-        draw_text_Right(str(user_info[3]), HelveticaFont, (255, 255, 255), screen, 740, 830 // 2 - 20)
+        draw_text_Right(str(user_info[3]), HelveticaFont, (255, 255, 255), screen, 740, 830 // 2 - 22)
 
         draw_text_Left("win/loss/push:", HelveticaFont, (255, 255, 255), screen, display_width // 2, 840 // 2)
         Line3 = pygame.Rect(display_width // 2, 1000 // 2, 340, 2)
         pygame.draw.rect(screen, "white", Line3)
-        draw_text_Right(user_info[7], HelveticaFont, (255, 255, 255), screen, 740, 1000 // 2 - 20)
+        draw_text_Right(user_info[7], HelveticaFont, (255, 255, 255), screen, 740, 1000 // 2 - 22)
         for event in pygame.event.get():
             if event.type == pygame.MOUSEMOTION:
                 if blackjack_rect.collidepoint(event.pos) and \
