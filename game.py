@@ -62,6 +62,12 @@ podium = pygame.image.load('Pictures/podium.png').convert_alpha()
 Highlighted_podium = pygame.image.load('Pictures/Highlighted_podium.png').convert_alpha()
 Highlighted_pfp = [Highlighted_man, Highlighted_man2, Highlighted_woman, Highlighted_woman2]
 
+first_place = pygame.image.load('Pictures/1st_medal.png').convert_alpha()
+second_place = pygame.image.load('Pictures/2nd_medal.png').convert_alpha()
+third_place = pygame.image.load('Pictures/3rd_medal.png').convert_alpha()
+all_medals = [first_place, second_place, third_place]
+# all_medals = [pygame.transform.scale(first_place, (49, 49)), pygame.transform.scale(second_place, (49, 49)), pygame.transform.scale(third_place, (49, 49))]
+
 # Fonts
 MainScreenFont = pygame.font.SysFont("gabriola", 80)
 ButtonFont = pygame.font.Font("Fonts/Copperplate Gothic Bold Regular.ttf", 28)
@@ -152,9 +158,9 @@ def main_menu(conn):
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if login_button.collidepoint(event.pos):
                     login_menu(conn)
-                if Register_button.collidepoint(event.pos):
+                elif Register_button.collidepoint(event.pos):
                     register_menu(conn)
-                if quit_button.collidepoint(event.pos):
+                elif quit_button.collidepoint(event.pos):
                     pygame.quit()
                     sys.exit()
 
@@ -367,24 +373,21 @@ def loggedin_menu(conn, user_info):
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                build_and_send_message(conn, PROTOCOL_CLIENT["logout_msg"], user_info[1])
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    build_and_send_message(conn, PROTOCOL_CLIENT["logout_msg"], user_info[1])
                     pygame.quit()
                     sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if play_button.collidepoint(event.pos):
-                    play_menu(conn, user_info)
-                if help_button.collidepoint(event.pos):
+                    user_info = play_menu(conn, user_info)
+                elif help_button.collidepoint(event.pos):
                     help_menu(conn, user_info)
-                if logout_button.collidepoint(event.pos):
+                elif logout_button.collidepoint(event.pos):
                     build_and_send_message(conn, PROTOCOL_CLIENT["logout_msg"], user_info[1])
                     main_menu(conn)
-                if quit_button.collidepoint(event.pos):
-                    build_and_send_message(conn, PROTOCOL_CLIENT["logout_msg"], user_info[1])
+                elif quit_button.collidepoint(event.pos):
                     pygame.quit()
                     sys.exit()
 
@@ -454,24 +457,23 @@ def play_menu(conn, user_info):
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if blackjack_rect.collidepoint(event.pos) and \
                         BlackJack_mask.get_at((event.pos[0] - blackjack_rect.x, event.pos[1] - blackjack_rect.y)):
-                    return
+                    return user_info
                 if Highlighted_pfp_pic_rect.collidepoint(event.pos) and \
                         pfp_pic_mask.get_at(
                             (event.pos[0] - Highlighted_pfp_pic_rect.x, event.pos[1] - Highlighted_pfp_pic_rect.y)):
                     highlighted_pfp_pic_true = False
-                    profile_menu(conn, user_info)
+                    user_info = profile_menu(conn, user_info)
                 if Highlighted_podium_rect.collidepoint(event.pos) and \
                         Highlighted_podium_mask.get_at(
                             (event.pos[0] - Highlighted_podium_rect.x, event.pos[1] - Highlighted_podium_rect.y)):
                     highlighted_podium_true = False
-                    draw_text("click", ButtonFont, "black", screen, 400, 300)
+                    leaderboard_menu(conn, user_info)
             if event.type == pygame.QUIT:
-                build_and_send_message(conn, PROTOCOL_CLIENT["logout_msg"], user_info[1])
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    return
+                    return user_info
         pygame.display.update()
         clock.tick(120)
 
@@ -480,10 +482,11 @@ def profile_menu(conn, user_info):
     highlighted_podium_true = False
     highlighted_pfp_pic_true = False
     bj_txt_true = False
+    big_pfp = pfp_pictures[user_info[4]]
     while True:
         screen.blit(overlay, (0, 0))
         draw_text("BlackJack", MainScreenFont, (255, 255, 255), screen, display_width // 2, 120 // 2)
-        draw_text(f"chips: {user_info[2]}", HelveticaFont, (255, 255, 255), screen, display_width // 2, 215 // 2)
+        draw_text('profile page', HelveticaFont, (255, 255, 255), screen, display_width // 2, 215 // 2)
 
         pfp_pic = pfp_pictures[user_info[4]]
         pfp_pic_rect = pfp_pic.get_rect()
@@ -514,9 +517,15 @@ def profile_menu(conn, user_info):
         if bj_txt_true:
             screen.blit(bj_txt, blackjack_rect)
 
-        screen.blit(pygame.transform.scale(pfp_pic, (250, 250)), (55, 170))
-        play_button = pygame.Rect(100, 440, 160, 45)
-        pygame.draw.rect(screen, "white", play_button)
+        screen.blit(pygame.transform.scale(big_pfp, (250, 250)), (75, 170))
+        save_pfp_button = pygame.Rect(120, 440, 160, 45)
+        pygame.draw.rect(screen, "white", save_pfp_button)
+        draw_text("save", HelveticaFont, "black", screen, save_pfp_button.x + save_pfp_button.w/2, save_pfp_button.y + save_pfp_button.h/2)
+
+        left_arrow = pygame.Rect(20, 290, 20, 45)
+        pygame.draw.rect(screen, "white", left_arrow)
+        right_arrow = pygame.Rect(360, 290, 20, 45)
+        pygame.draw.rect(screen, "white", right_arrow)
 
         draw_text_Left("username:", HelveticaFont, (255, 255, 255), screen, display_width // 2, 330 // 2)
         Line1 = pygame.Rect(display_width // 2, 490 // 2, 340, 2)
@@ -559,22 +568,131 @@ def profile_menu(conn, user_info):
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if blackjack_rect.collidepoint(event.pos) and \
                         BlackJack_mask.get_at((event.pos[0] - blackjack_rect.x, event.pos[1] - blackjack_rect.y)):
-                    return
+                    return user_info
                 # if Highlighted_pfp_pic_rect.collidepoint(event.pos) and \
                 #         pfp_pic_mask.get_at(
                 #             (event.pos[0] - Highlighted_pfp_pic_rect.x, event.pos[1] - Highlighted_pfp_pic_rect.y)):
                 #     draw_text("click", ButtonFont, "black", screen, 400, 400)
-                if Highlighted_podium_rect.collidepoint(event.pos) and \
+                elif Highlighted_podium_rect.collidepoint(event.pos) and \
                         Highlighted_podium_mask.get_at(
                             (event.pos[0] - Highlighted_podium_rect.x, event.pos[1] - Highlighted_podium_rect.y)):
-                    draw_text("click", ButtonFont, "black", screen, 400, 300)
+                    leaderboard_menu(conn, user_info)
+                elif save_pfp_button.collidepoint(event.pos):
+                    if pfp_pictures.index(big_pfp) != user_info[4]:
+                        cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["change_pfp"], user_info[1] + DATA_DELIMITER + str(pfp_pictures.index(big_pfp)))
+                        if cmd == PROTOCOL_SERVER['change_pfp_ok']:
+                            user_info = ast.literal_eval(msg)
+                elif right_arrow.collidepoint(event.pos):
+                    if pfp_pictures.index(big_pfp) == 3:
+                        big_pfp = pfp_pictures[0]
+                    else:
+                        big_pfp = pfp_pictures[pfp_pictures.index(big_pfp) + 1]
+                elif left_arrow.collidepoint(event.pos):
+                    big_pfp = pfp_pictures[pfp_pictures.index(big_pfp) - 1]
             if event.type == pygame.QUIT:
-                build_and_send_message(conn, PROTOCOL_CLIENT["logout_msg"], user_info[1])
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    return
+                    return user_info
+        pygame.display.update()
+        clock.tick(120)
+
+
+def leaderboard_menu(conn, user_info):
+    highlighted_podium_true = False
+    highlighted_pfp_pic_true = False
+    bj_txt_true = False
+    cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["get_leaderboard"], "")
+    users_leaderboard = ast.literal_eval(msg)
+    print(users_leaderboard)
+    while True:
+        screen.blit(overlay, (0, 0))
+        draw_text("BlackJack", MainScreenFont, (255, 255, 255), screen, display_width // 2, 120 // 2)
+        draw_text("leaderboard of the highscores", HelveticaFont, (255, 255, 255), screen, display_width // 2, 215 // 2)
+
+        pfp_pic = pfp_pictures[user_info[4]]
+        pfp_pic_rect = pfp_pic.get_rect()
+        pfp_pic_rect.center = (display_width / 1.075, 120 // 2)
+        screen.blit(pfp_pic, pfp_pic_rect)
+
+        Highlighted_pfp_pic = Highlighted_pfp[user_info[4]]
+        Highlighted_pfp_pic_rect = Highlighted_pfp_pic.get_rect()
+        Highlighted_pfp_pic_rect.center = (display_width / 1.075, 120 // 2)
+        pfp_pic_mask = pygame.mask.from_surface(Highlighted_pfp_pic)
+        if highlighted_pfp_pic_true:
+            screen.blit(Highlighted_pfp_pic, Highlighted_pfp_pic_rect)
+
+        podium_rect = podium.get_rect()
+        podium_rect.center = (display_width / 1.25, 120 // 2)
+        screen.blit(podium, podium_rect)
+
+        Highlighted_podium_rect = Highlighted_podium.get_rect()
+        Highlighted_podium_rect.center = (display_width / 1.25, 120 // 2)
+        Highlighted_podium_mask = pygame.mask.from_surface(Highlighted_podium)
+        if highlighted_podium_true:
+            screen.blit(Highlighted_podium, Highlighted_podium_rect)
+
+        bj_txt = render1('BlackJack', MainScreenFont)
+        blackjack_rect = bj_txt.get_rect()
+        blackjack_rect.center = (display_width // 2, 120 // 2)
+        BlackJack_mask = pygame.mask.from_surface(bj_txt)
+        if bj_txt_true:
+            screen.blit(bj_txt, blackjack_rect)
+
+        for i in range(len(users_leaderboard)):
+            draw_text(str(i+1), ButtonFont, 'white', screen, 60, 180 + i*90)
+            if i < 3:
+                medal = all_medals[i]
+                pfp_pic_rect = medal.get_rect()
+                pfp_pic_rect.center = (135, 188 + i * 90)
+                screen.blit(medal, pfp_pic_rect)
+
+            user_pfp = pfp_pictures[users_leaderboard[i][1]]
+            pfp_pic_rect = user_pfp.get_rect()
+            pfp_pic_rect.center = (230, 180 + i*90)
+            screen.blit(user_pfp, pfp_pic_rect)
+
+            draw_text(users_leaderboard[i][0], ButtonFont, 'white', screen, 400, 180 + i * 90)
+
+            draw_text(str(users_leaderboard[i][2]), ButtonFont, 'white', screen, 650, 180 + i * 90)
+        for event in pygame.event.get():
+            if event.type == pygame.MOUSEMOTION:
+                if blackjack_rect.collidepoint(event.pos) and \
+                        BlackJack_mask.get_at((event.pos[0] - blackjack_rect.x, event.pos[1] - blackjack_rect.y)):
+                    bj_txt_true = True
+                else:
+                    bj_txt_true = False
+                if Highlighted_pfp_pic_rect.collidepoint(event.pos) and \
+                        pfp_pic_mask.get_at(
+                            (event.pos[0] - Highlighted_pfp_pic_rect.x, event.pos[1] - Highlighted_pfp_pic_rect.y)):
+                    highlighted_pfp_pic_true = True
+                else:
+                    highlighted_pfp_pic_true = False
+                if Highlighted_podium_rect.collidepoint(event.pos) and \
+                        Highlighted_podium_mask.get_at(
+                            (event.pos[0] - Highlighted_podium_rect.x, event.pos[1] - Highlighted_podium_rect.y)):
+                    highlighted_podium_true = True
+                else:
+                    highlighted_podium_true = False
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if blackjack_rect.collidepoint(event.pos) and \
+                        BlackJack_mask.get_at((event.pos[0] - blackjack_rect.x, event.pos[1] - blackjack_rect.y)):
+                    return user_info
+                if Highlighted_pfp_pic_rect.collidepoint(event.pos) and \
+                        pfp_pic_mask.get_at(
+                            (event.pos[0] - Highlighted_pfp_pic_rect.x, event.pos[1] - Highlighted_pfp_pic_rect.y)):
+                    draw_text("12222222222222222222222222", ButtonFont, "black", screen, 400, 400)
+                # elif Highlighted_podium_rect.collidepoint(event.pos) and \
+                #         Highlighted_podium_mask.get_at(
+                #             (event.pos[0] - Highlighted_podium_rect.x, event.pos[1] - Highlighted_podium_rect.y)):
+                #     pass
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    return user_info
         pygame.display.update()
         clock.tick(120)
 
@@ -588,7 +706,6 @@ def help_menu(conn, user_info):
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                build_and_send_message(conn, PROTOCOL_CLIENT["logout_msg"], user_info[1])
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:

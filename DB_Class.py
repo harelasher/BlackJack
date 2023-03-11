@@ -45,6 +45,9 @@ class Database:
         return True
 
     def update_user_score(self, username, score):
+        self.cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
+        if self.cursor.fetchone() is None or not (score.isdigit() or (score.startswith('-') and score[1:].isdigit())):
+            return False
         self.cursor.execute("UPDATE users SET score=score+? WHERE username=?", (score, username))
         self.conn.commit()
         self.update_user_highscore(username)
@@ -60,6 +63,9 @@ class Database:
             self.conn.commit()
 
     def login_check(self, username, password):
+        self.cursor.execute("SELECT * FROM users WHERE username = ? and is_online=0", (username,))
+        if self.cursor.fetchone() is None:
+            return False, "username already logged in or non existent"
         self.cursor.execute("SELECT password FROM users WHERE username=? and is_online=0", (username, ))
         password_enc = self.cursor.fetchone()[0]
         if decrypt(password_enc).decode() == password:
@@ -67,7 +73,7 @@ class Database:
             self.conn.commit()
             return True, f"{username} logged in"
         else:
-            return False, f"The username is already online or the username and password combination is not correct"
+            return False, f"the username and password combination is not correct"
 
     def logout(self, username):
         self.cursor.execute("UPDATE users SET is_online=0 WHERE username=?", (username,))
@@ -91,9 +97,18 @@ class Database:
     def check_date(self):
         pass
 
+    def change_pfp_pic(self, username, pfp_pic):
+        self.cursor.execute("UPDATE users SET pfp_pic=? WHERE username=?", (pfp_pic, username))
+        self.conn.commit()
+        return True
+
     def __del__(self):
         self.conn.close()
 
+    def get_top_users(self):
+        self.cursor.execute("SELECT username, pfp_pic, highscore FROM users ORDER BY highscore DESC LIMIT 5")
+        top_users = self.cursor.fetchall()
+        return top_users
 
 #######################################################################################################################
 #######################################################################################################################

@@ -10,11 +10,15 @@ DELIMITER = "|"  # Delimiter character in protocol
 DATA_DELIMITER = '#'
 PROTOCOL_CLIENT = {'login_msg': 'LOGIN',
                    'logout_msg': 'LOGOUT',
-                   'register_msg': "REGISTER"}
+                   'register_msg': "REGISTER",
+                   'change_pfp': 'CHANGE_PFP',
+                   'get_leaderboard': 'LEADERBOARD'}
 PROTOCOL_SERVER = {'login_ok_msg': 'LOGIN_OK',
                    'login_failed_msg': 'ERROR',
                    'register_ok_msg': "REGISTER_OK",
                    'register_failed_msg': "ERROR",
+                   'change_pfp_ok': 'CHANGE_OK',
+                   'leaderboard_ok' : 'LEADERBOARD_OK',
                    'error_msg': 'ERROR'}
 ERROR = None
 
