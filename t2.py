@@ -435,6 +435,9 @@ def play_menu(conn, user_info):
         BlackJack_mask = pygame.mask.from_surface(bj_txt)
         if bj_txt_true:
             screen.blit(bj_txt, blackjack_rect)
+
+        table_button1 = pygame.Rect(50, 190, 270, 65)
+        pygame.draw.rect(screen, "white", table_button1)
         for event in pygame.event.get():
             if event.type == pygame.MOUSEMOTION:
                 if blackjack_rect.collidepoint(event.pos) and \
@@ -520,7 +523,8 @@ def profile_menu(conn, user_info):
         screen.blit(pygame.transform.scale(big_pfp, (250, 250)), (75, 170))
         save_pfp_button = pygame.Rect(120, 440, 160, 45)
         pygame.draw.rect(screen, "white", save_pfp_button)
-        draw_text("save", HelveticaFont, "black", screen, save_pfp_button.x + save_pfp_button.w/2, save_pfp_button.y + save_pfp_button.h/2)
+        draw_text("save", HelveticaFont, "black", screen, save_pfp_button.x + save_pfp_button.w / 2,
+                  save_pfp_button.y + save_pfp_button.h / 2)
 
         left_arrow = pygame.Rect(20, 290, 20, 45)
         pygame.draw.rect(screen, "white", left_arrow)
@@ -579,7 +583,9 @@ def profile_menu(conn, user_info):
                     leaderboard_menu(conn, user_info)
                 elif save_pfp_button.collidepoint(event.pos):
                     if pfp_pictures.index(big_pfp) != user_info[4]:
-                        cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["change_pfp"], user_info[1] + DATA_DELIMITER + str(pfp_pictures.index(big_pfp)))
+                        cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["change_pfp"],
+                                                         user_info[1] + DATA_DELIMITER + str(
+                                                             pfp_pictures.index(big_pfp)))
                         if cmd == PROTOCOL_SERVER['change_pfp_ok']:
                             user_info = ast.literal_eval(msg)
                 elif right_arrow.collidepoint(event.pos):
@@ -605,11 +611,13 @@ def leaderboard_menu(conn, user_info):
     bj_txt_true = False
     cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["get_leaderboard"], "")
     users_leaderboard = ast.literal_eval(msg)
+    prev_time = time.time()
     print(users_leaderboard)
     while True:
         screen.blit(overlay, (0, 0))
         draw_text("BlackJack", MainScreenFont, (255, 255, 255), screen, display_width // 2, 120 // 2)
-        draw_text("leaderboard of the biggest scores", HelveticaFont, (255, 255, 255), screen, display_width // 2, 215 // 2)
+        draw_text("leaderboard of the biggest scores", HelveticaFont, (255, 255, 255), screen, display_width // 2,
+                  215 // 2)
 
         pfp_pic = pfp_pictures[user_info[4]]
         pfp_pic_rect = pfp_pic.get_rect()
@@ -641,7 +649,7 @@ def leaderboard_menu(conn, user_info):
             screen.blit(bj_txt, blackjack_rect)
 
         for i in range(len(users_leaderboard)):
-            draw_text(str(i+1), ButtonFont, 'white', screen, 60, 180 + i*90)
+            draw_text(str(i + 1), ButtonFont, 'white', screen, 60, 180 + i * 90)
             if i < 3:
                 medal = all_medals[i]
                 pfp_pic_rect = medal.get_rect()
@@ -650,7 +658,7 @@ def leaderboard_menu(conn, user_info):
 
             user_pfp = pfp_pictures[users_leaderboard[i][1]]
             pfp_pic_rect = user_pfp.get_rect()
-            pfp_pic_rect.center = (230, 180 + i*90)
+            pfp_pic_rect.center = (230, 180 + i * 90)
             screen.blit(user_pfp, pfp_pic_rect)
 
             draw_text(users_leaderboard[i][0], ButtonFont, 'white', screen, 400, 180 + i * 90)
@@ -683,10 +691,14 @@ def leaderboard_menu(conn, user_info):
                         pfp_pic_mask.get_at(
                             (event.pos[0] - Highlighted_pfp_pic_rect.x, event.pos[1] - Highlighted_pfp_pic_rect.y)):
                     draw_text("12222222222222222222222222", ButtonFont, "black", screen, 400, 400)
-                # elif Highlighted_podium_rect.collidepoint(event.pos) and \
-                #         Highlighted_podium_mask.get_at(
-                #             (event.pos[0] - Highlighted_podium_rect.x, event.pos[1] - Highlighted_podium_rect.y)):
-                #     pass
+                elif Highlighted_podium_rect.collidepoint(event.pos) and \
+                        Highlighted_podium_mask.get_at(
+                            (event.pos[0] - Highlighted_podium_rect.x, event.pos[1] - Highlighted_podium_rect.y))\
+                        and time.time() - prev_time >= 1:
+                    prev_time += 3
+                    cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["get_leaderboard"], "")
+                    users_leaderboard = ast.literal_eval(msg)
+                    highlighted_podium_true = False
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()

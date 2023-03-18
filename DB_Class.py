@@ -109,6 +109,3 @@ class Database:
         self.cursor.execute("SELECT username, pfp_pic, highscore FROM users ORDER BY highscore DESC LIMIT 5")
         top_users = self.cursor.fetchall()
         return top_users
-
-#######################################################################################################################
-#######################################################################################################################
