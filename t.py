@@ -12,13 +12,19 @@ PROTOCOL_CLIENT = {'login_msg': 'LOGIN',
                    'logout_msg': 'LOGOUT',
                    'register_msg': "REGISTER",
                    'change_pfp': 'CHANGE_PFP',
-                   'get_leaderboard': 'LEADERBOARD'}
+                   'get_leaderboard': 'LEADERBOARD',
+                   'join_seat': "JOIN_SEAT",
+                   "leave_seat": "LEAVE_SEAT",
+                   'join_table': "JOIN_TABLE",
+                   'leave_table': "LEAVE_TABLE"}
 PROTOCOL_SERVER = {'login_ok_msg': 'LOGIN_OK',
                    'login_failed_msg': 'ERROR',
                    'register_ok_msg': "REGISTER_OK",
                    'register_failed_msg': "ERROR",
                    'change_pfp_ok': 'CHANGE_OK',
-                   'leaderboard_ok' : 'LEADERBOARD_OK',
+                   'leaderboard_ok': 'LEADERBOARD_OK',
+                   'join_seat_ok': "JOIN_SEAT_OK",
+                   'leave_seat_ok': "LEAVE_SEAT_OK",
                    'error_msg': 'ERROR'}
 ERROR = None
 
@@ -37,6 +43,7 @@ def build_message(cmd, data):
         padded_cmd = cmd.strip().ljust(CMD_FIELD_LENGTH)
         padded_length = str(data_length).zfill(LENGTH_FIELD_LENGTH)
         full_msg = f"{padded_cmd}{DELIMITER}{padded_length}{DELIMITER}{data}"
+        print(full_msg)
         return encrypt(full_msg)
 
 

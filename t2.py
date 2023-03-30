@@ -10,6 +10,12 @@ import time
 available_chars = string.ascii_lowercase + string.digits
 
 
+def circle_surface(color, radius, x, y, width=0):
+    shape_surf = pygame.Surface((x * 2, y * 2), pygame.SRCALPHA)
+    pygame.draw.circle(shape_surf, color, (x, y), radius, width)
+    return shape_surf
+
+
 # (rect_x + rect_width // 2, rect_y + rect_height // 2) -->
 def draw_text(text, font, color, surface, x, y):
     textobj = font.render(text, 1, color)
@@ -18,6 +24,7 @@ def draw_text(text, font, color, surface, x, y):
     surface.blit(textobj, textrect)
 
 
+# label_rect = textobj.get_rect(center=(x, y))
 def draw_text_Left(text, font, color, surface, x, y, ):
     textobj = font.render(text, 1, color)
     textrect = textobj.get_rect()
@@ -66,8 +73,8 @@ first_place = pygame.image.load('Pictures/1st_medal.png').convert_alpha()
 second_place = pygame.image.load('Pictures/2nd_medal.png').convert_alpha()
 third_place = pygame.image.load('Pictures/3rd_medal.png').convert_alpha()
 all_medals = [first_place, second_place, third_place]
-# all_medals = [pygame.transform.scale(first_place, (49, 49)), pygame.transform.scale(second_place, (49, 49)), pygame.transform.scale(third_place, (49, 49))]
 
+bj_table = pygame.image.load('Pictures/blackjack_table.png').convert_alpha()
 # Fonts
 MainScreenFont = pygame.font.SysFont("gabriola", 80)
 ButtonFont = pygame.font.Font("Fonts/Copperplate Gothic Bold Regular.ttf", 28)
@@ -436,8 +443,17 @@ def play_menu(conn, user_info):
         if bj_txt_true:
             screen.blit(bj_txt, blackjack_rect)
 
-        table_button1 = pygame.Rect(50, 190, 270, 65)
-        pygame.draw.rect(screen, "white", table_button1)
+        table_button1 = pygame.Rect(100, 230, 140, 140)
+        pygame.draw.rect(screen, "black", table_button1)
+
+        table_button2 = pygame.Rect(table_button1.x + table_button1.w + 90, table_button1.y, table_button1.w,
+                                    table_button1.h)
+        pygame.draw.rect(screen, "black", table_button2)
+
+        table_button3 = pygame.Rect(table_button2.x + table_button2.w + 90, table_button2.y, table_button2.w,
+                                    table_button2.h)
+        pygame.draw.rect(screen, "black", table_button3)
+
         for event in pygame.event.get():
             if event.type == pygame.MOUSEMOTION:
                 if blackjack_rect.collidepoint(event.pos) and \
@@ -471,6 +487,8 @@ def play_menu(conn, user_info):
                             (event.pos[0] - Highlighted_podium_rect.x, event.pos[1] - Highlighted_podium_rect.y)):
                     highlighted_podium_true = False
                     leaderboard_menu(conn, user_info)
+                if table_button1.collidepoint(event.pos):
+                    table1(conn, user_info)
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
@@ -580,7 +598,7 @@ def profile_menu(conn, user_info):
                 elif Highlighted_podium_rect.collidepoint(event.pos) and \
                         Highlighted_podium_mask.get_at(
                             (event.pos[0] - Highlighted_podium_rect.x, event.pos[1] - Highlighted_podium_rect.y)):
-                    leaderboard_menu(conn, user_info)
+                    return leaderboard_menu(conn, user_info)
                 elif save_pfp_button.collidepoint(event.pos):
                     if pfp_pictures.index(big_pfp) != user_info[4]:
                         cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["change_pfp"],
@@ -690,10 +708,10 @@ def leaderboard_menu(conn, user_info):
                 if Highlighted_pfp_pic_rect.collidepoint(event.pos) and \
                         pfp_pic_mask.get_at(
                             (event.pos[0] - Highlighted_pfp_pic_rect.x, event.pos[1] - Highlighted_pfp_pic_rect.y)):
-                    draw_text("12222222222222222222222222", ButtonFont, "black", screen, 400, 400)
+                    return profile_menu(conn, user_info)
                 elif Highlighted_podium_rect.collidepoint(event.pos) and \
                         Highlighted_podium_mask.get_at(
-                            (event.pos[0] - Highlighted_podium_rect.x, event.pos[1] - Highlighted_podium_rect.y))\
+                            (event.pos[0] - Highlighted_podium_rect.x, event.pos[1] - Highlighted_podium_rect.y)) \
                         and time.time() - prev_time >= 1:
                     prev_time += 3
                     cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["get_leaderboard"], "")
@@ -707,6 +725,222 @@ def leaderboard_menu(conn, user_info):
                     return user_info
         pygame.display.update()
         clock.tick(120)
+
+
+def table1(conn, user_info):
+    cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["join_table"], "0")
+    game_state = ast.literal_eval(str(msg))
+
+    offset_x = None
+    scroll_value = 0
+    scroll_bar_rect = pygame.Rect(440, 540, 300, 20)
+
+    # Define the rectangle of the scroll bar handle
+    scroll_handle_rect = pygame.Rect(scroll_bar_rect.x, scroll_bar_rect.y - 5, 20, 30)
+    left_button_rect = pygame.Rect(scroll_bar_rect.x - 40, scroll_bar_rect.y - 5, 30, 30)
+    right_button_rect = pygame.Rect(scroll_bar_rect.x + scroll_bar_rect.w + 10, scroll_bar_rect.y - 5, 30, 30)
+
+    taken_seat = None
+    while True:
+        bj_screen()
+        screen.blit(bj_table, (-10, 0))
+
+        hit_button = circle_surface("black", 50, 70, 180)  # (center coordinates), radius
+        hit_mask = pygame.mask.from_surface(hit_button)
+
+        stand_button = circle_surface("black", 50, 70, 180 + 120)  # (center coordinates), radius
+        stand_mask = pygame.mask.from_surface(stand_button)
+
+        double_down_button = circle_surface("black", 50, 70, 180 + 120 + 120)  # (center coordinates), radius
+        double_down_mask = pygame.mask.from_surface(double_down_button)
+
+        bet_amount_button = pygame.Rect(scroll_bar_rect.x - 50, 510, scroll_bar_rect.w + 100, 80)
+        profile_picture = pygame.transform.scale(pfp_pictures[user_info[4]], (70, 70))
+
+        if taken_seat is None:
+            table_seat1_noWidth = circle_surface("black", 32, 200, 400, 3)  # (center coordinates), radius
+            table_seat1 = circle_surface("black", 32, 200, 400)
+            table_seat1_mask = pygame.mask.from_surface(table_seat1)
+            screen.blit(table_seat1_noWidth, (0, 0))
+            draw_text("sit", HelveticaFont, "white", screen, 200, 390)
+            draw_text("here", HelveticaFont, "white", screen, 200, 404)
+
+
+            table_seat2_noWidth = circle_surface("black", 32, 400, 475, 3)  # (center coordinates), radius
+            table_seat2 = circle_surface("black", 32, 400, 475)
+            table_seat2_mask = pygame.mask.from_surface(table_seat2)
+            screen.blit(table_seat2_noWidth, (0, 0))
+            draw_text("sit", HelveticaFont, "white", screen, 400, 465)
+            draw_text("here", HelveticaFont, "white", screen, 400, 479)
+
+
+            table_seat3_noWidth = circle_surface("black", 32, 595, 400, 3)  # (center coordinates), radius
+            table_seat3 = circle_surface("black", 32, 595, 400)
+            table_seat3_mask = pygame.mask.from_surface(table_seat3)
+            screen.blit(table_seat3_noWidth, (0, 0))
+            draw_text("sit", HelveticaFont, "white", screen, 595, 390)
+            draw_text("here", HelveticaFont, "white", screen, 595, 404)
+
+        if game_state["seats"][0]["address"] is not None:
+            profile_rect = profile_picture.get_rect(center=(200, 400))
+            screen.blit(pygame.transform.scale(pfp_pictures[int(game_state["seats"][0]["profile_picture"])],
+                                               (70, 70)), profile_rect)
+        if game_state["seats"][1]["address"] is not None:
+            profile_rect = profile_picture.get_rect(center=(400, 475))
+            screen.blit(pygame.transform.scale(pfp_pictures[int(game_state["seats"][1]["profile_picture"])],
+                                               (70, 70)), profile_rect)
+        if game_state["seats"][2]["address"] is not None:
+            profile_rect = profile_picture.get_rect(center=(595, 400))
+            screen.blit(pygame.transform.scale(pfp_pictures[int(game_state["seats"][2]["profile_picture"])],
+                                               (70, 70)), profile_rect)
+
+        if taken_seat is not None:
+            screen.blit(hit_button, (0, 0))
+            draw_text("hit", HelveticaFont, "white", screen, 70, 180)
+
+            screen.blit(stand_button, (0, 0))
+            draw_text("stand", HelveticaFont, "white", screen, 70, 180 + 120)
+
+            screen.blit(double_down_button, (0, 0))
+            draw_text("double", HelveticaFont, "white", screen, 70, 180 + 120 + 120 - 7)
+            draw_text("down", HelveticaFont, "white", screen, 70, 180 + 120 + 120 + 7)
+
+            pygame.draw.rect(screen, "black", bet_amount_button)
+            draw_text("bet amount", HelveticaFont, "white", screen, bet_amount_button.x + bet_amount_button.w / 2,
+                      bet_amount_button.y + 10)
+
+
+            ##########
+            MAX_VALUE = user_info[2]
+
+            pygame.draw.rect(screen, 'GRAY', scroll_bar_rect)
+            pygame.draw.rect(screen, 'BLACK', scroll_bar_rect, 2)
+
+            # Draw the scroll handle
+            pygame.draw.rect(screen, 'GRAY', scroll_handle_rect)
+            pygame.draw.rect(screen, 'BLACK', scroll_handle_rect, 2)
+
+            # Draw the label for the scroll value
+            label = ButtonFont.render(str(scroll_value), True, 'white')
+            rect = label.get_rect(
+                center=(bet_amount_button.x + bet_amount_button.w / 2, scroll_bar_rect.y + scroll_bar_rect.h + 15))
+            screen.blit(label, rect)
+
+            # Draw the left button
+            pygame.draw.rect(screen, 'GRAY', left_button_rect)
+            pygame.draw.rect(screen, 'BLACK', left_button_rect, 2)
+            left_button_label = ButtonFont.render("<", True, 'BLACK')
+            left_button_label_rect = left_button_label.get_rect(center=left_button_rect.center)
+            screen.blit(left_button_label, left_button_label_rect)
+
+            # Draw the right button
+            pygame.draw.rect(screen, 'GRAY', right_button_rect)
+            pygame.draw.rect(screen, 'BLACK', right_button_rect, 2)
+            right_button_label = ButtonFont.render(">", True, 'BLACK')
+            right_button_label_rect = right_button_label.get_rect(center=right_button_rect.center)
+            screen.blit(right_button_label, right_button_label_rect)
+
+            cursor = pygame.Rect((rect.bottomleft[0], rect.bottomleft[1] - 5), (rect.width, 2))
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    if taken_seat is not None:
+                        cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["leave_seat"],
+                                                         '0' + DATA_DELIMITER + str(taken_seat))
+                        game_state = ast.literal_eval(msg)
+                        taken_seat = None
+                    else:
+                        print(111111111111111111111111111111111111)
+                        build_and_send_message(conn, PROTOCOL_CLIENT["leave_table"], "0")
+                        return user_info
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if table_seat1_mask.get_rect().collidepoint(event.pos) and \
+                        table_seat1_mask.get_at(
+                            (event.pos[0] - table_seat1_mask.get_rect().x,
+                             event.pos[1] - table_seat1_mask.get_rect().y)) and taken_seat is None:
+                    cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["join_seat"],
+                                                     '0' + DATA_DELIMITER + '0')
+                    if cmd != "ERROR":
+                        taken_seat = 0
+                        game_state = ast.literal_eval(msg)
+                elif table_seat2.get_rect().collidepoint(event.pos) and \
+                        table_seat2_mask.get_at(
+                            (event.pos[0] - table_seat2_mask.get_rect().x,
+                             event.pos[1] - table_seat2_mask.get_rect().y)) and taken_seat is None:
+                    cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["join_seat"],
+                                                     '0' + DATA_DELIMITER + '1')
+                    if cmd != "ERROR":
+                        taken_seat = 1
+                        game_state = ast.literal_eval(msg)
+                elif table_seat3_mask.get_rect().collidepoint(event.pos) and \
+                        table_seat3_mask.get_at(
+                            (event.pos[0] - table_seat3_mask.get_rect().x,
+                             event.pos[1] - table_seat3_mask.get_rect().y)) and taken_seat is None:
+                    cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["join_seat"],
+                                                     '0' + DATA_DELIMITER + '2')
+                    if cmd != "ERROR":
+                        taken_seat = 2
+                        game_state = ast.literal_eval(msg)
+                if taken_seat is not None:
+                    if hit_mask.get_rect().collidepoint(event.pos) and \
+                            hit_mask.get_at(
+                                (event.pos[0] - hit_mask.get_rect().x, event.pos[1] - hit_mask.get_rect().y)):
+                        print("hit")
+                    if stand_mask.get_rect().collidepoint(event.pos) and \
+                            stand_mask.get_at(
+                                (event.pos[0] - stand_mask.get_rect().x, event.pos[1] - stand_mask.get_rect().y)):
+                        print("stand")
+                    elif double_down_mask.get_rect().collidepoint(event.pos) and \
+                            double_down_mask.get_at((event.pos[0] - double_down_mask.get_rect().x,
+                                                     event.pos[1] - double_down_mask.get_rect().y)):
+                        print("double_down")
+                    elif scroll_bar_rect.collidepoint(event.pos):
+                        # Set the offset for the scroll handle
+                        scroll_handle_rect.x = event.pos[0] - scroll_handle_rect.w / 2
+                        scroll_value = int((scroll_handle_rect.x - scroll_bar_rect.left) / (
+                                scroll_bar_rect.width - scroll_handle_rect.width) * MAX_VALUE)
+                        offset_x = 1
+                    elif left_button_rect.collidepoint(event.pos):
+                        scroll_value = max(0, scroll_value - 1)
+                        scroll_handle_rect.x = int(
+                            scroll_bar_rect.left + scroll_value / MAX_VALUE * (
+                                    scroll_bar_rect.width - scroll_handle_rect.width))
+                        offset_x = None
+                    elif right_button_rect.collidepoint(event.pos):
+                        scroll_value = min(MAX_VALUE, scroll_value + 1)
+                        scroll_handle_rect.x = int(
+                            scroll_bar_rect.left + scroll_value / MAX_VALUE * (
+                                    scroll_bar_rect.width - scroll_handle_rect.width))
+                        offset_x = None
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1 and offset_x is not None and taken_seat is not None:
+                    if scroll_bar_rect.x + scroll_bar_rect.w - scroll_handle_rect.w / 2 < event.pos[0]:
+                        scroll_handle_rect.x = scroll_bar_rect.x + scroll_bar_rect.w - scroll_handle_rect.w
+                    elif event.pos[0] - scroll_handle_rect.w / 2 < scroll_bar_rect.x:
+                        scroll_handle_rect.x = scroll_bar_rect.x
+                    else:
+                        scroll_handle_rect.x = event.pos[0] - scroll_handle_rect.w / 2
+                    offset_x = None
+            elif event.type == pygame.MOUSEMOTION:
+                if offset_x is not None and taken_seat is not None:
+                    if scroll_bar_rect.x + scroll_bar_rect.w - scroll_handle_rect.w / 2 < event.pos[0]:
+                        scroll_handle_rect.x = scroll_bar_rect.x + scroll_bar_rect.w - scroll_handle_rect.w
+                    elif event.pos[0] - scroll_handle_rect.w / 2 < scroll_bar_rect.x:
+                        scroll_handle_rect.x = scroll_bar_rect.x
+                    else:
+                        scroll_handle_rect.x = event.pos[0] - scroll_handle_rect.w / 2
+                    # Update the scroll value based on the position of the scroll handle
+                    scroll_value = int((scroll_handle_rect.x - scroll_bar_rect.left) / (
+                            scroll_bar_rect.width - scroll_handle_rect.width) * MAX_VALUE)
+
+        # pygame.draw.rect(screen, 'black', cursor)
+        pygame.display.update()
+        clock.tick(120)
+        print(game_state)
 
 
 def help_menu(conn, user_info):

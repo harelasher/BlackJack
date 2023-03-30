@@ -6,14 +6,55 @@ from t import *
 db = Database()
 db.make_all_users_offline()
 
+MAX_CONNECTIONS = 5
+
 logged_users = {}
+
+game_state = {
+    "seats": [
+        {
+            "address": None,
+            "name": None,
+            "profile_picture": None,
+            "cards": None,
+            "bet": None
+        },
+        {
+            "address": None,
+            "name": None,
+            "profile_picture": None,
+            "cards": None,
+            "bet": None
+        },
+        {
+            "address": None,
+            "name": None,
+            "profile_picture": None,
+            "cards": None,
+            "bet": None
+        }
+    ],
+    "dealer": {
+        "cards": None,
+        "is_showing": False
+    },
+    "is_game_over": False,
+    "winner": None
+}
+all_players_table1 = {}
+game_state2 = {}
+all_players_table2 = {}
+game_state3 = {}
+all_players_table3 = {}
+tables = [game_state, game_state2, game_state3]
+all_table_players = [all_players_table1, all_players_table2, all_players_table3]
 
 
 def setup_socket():
     """Creates and sets up the socket"""
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind(("0.0.0.0", 51235))
-    server_socket.listen(5)
+    server_socket.listen(MAX_CONNECTIONS)
     return server_socket
 
 
@@ -57,6 +98,42 @@ def handle_leaderboard_message(conn):
     build_and_send_message(conn, PROTOCOL_SERVER['leaderboard_ok'], str(users))
 
 
+def handle_join_seat(conn, data, address):
+    chosen_table, chosen_seat = data.split("#")[0], data.split("#")[1]
+    if tables[int(chosen_table)]["seats"][int(chosen_seat)]["address"] is not None:
+        return build_and_send_message(conn, PROTOCOL_SERVER['error_msg'], "")
+    for user in logged_users:
+        if user == address:
+            print("111")
+            user_info = db.get_user_info(logged_users[user])
+            tables[int(chosen_table)]["seats"][int(chosen_seat)]["address"] = user
+            tables[int(chosen_table)]["seats"][int(chosen_seat)]["name"] = user_info[1]
+            tables[int(chosen_table)]["seats"][int(chosen_seat)]["profile_picture"] = user_info[4]
+    for player in all_table_players[int(chosen_table)].values():
+        build_and_send_message(player, PROTOCOL_SERVER['leaderboard_ok'], str(tables[int(chosen_table)]))
+
+
+def handle_leave_seat(conn, data, address):
+    chosen_table, chosen_seat = data.split("#")[0], data.split("#")[1]
+    if tables[int(chosen_table)]["seats"][int(chosen_seat)]["address"] is None:
+        return build_and_send_message(conn, PROTOCOL_SERVER['error_msg'], "")
+    tables[int(chosen_table)]["seats"][int(chosen_seat)]["address"] = None
+    tables[int(chosen_table)]["seats"][int(chosen_seat)]["name"] = None
+    tables[int(chosen_table)]["seats"][int(chosen_seat)]["name"] = None
+    for player in all_table_players[int(chosen_table)].values():
+        build_and_send_message(player, PROTOCOL_SERVER['leaderboard_ok'], str(tables[int(chosen_table)]))
+
+
+def handle_join_table(conn, data, address):
+    all_table_players[int(data)][address] = conn
+    for player in all_table_players[int(data)].values():
+        build_and_send_message(player, PROTOCOL_SERVER['leaderboard_ok'], str(tables[int(data)]))
+
+
+def handle_leave_table(conn, data, address):
+    del all_table_players[int(data)][address]
+
+
 def handle_client_message(client_socket, address):
     """Handles messages from a single client"""
     logged_users.update({address: ""})
@@ -79,6 +156,14 @@ def handle_client_message(client_socket, address):
             handle_change_pfp_message(client_socket, msg)
         elif cmd == PROTOCOL_CLIENT['get_leaderboard']:
             handle_leaderboard_message(client_socket)
+        elif cmd == PROTOCOL_CLIENT['join_seat']:
+            handle_join_seat(client_socket, msg, address)
+        elif cmd == PROTOCOL_CLIENT['leave_seat']:
+            handle_leave_seat(client_socket, msg, address)
+        elif cmd == PROTOCOL_CLIENT["join_table"]:
+            handle_join_table(client_socket, msg, address)
+        elif cmd == PROTOCOL_CLIENT["leave_table"]:
+            handle_leave_table(client_socket, msg, address)
 
     client_socket.close()
 
@@ -92,13 +177,14 @@ def handle_server_message():
             username = input(f"\033[95m ~~~~~~input username~~~~~~ \033[0m \n")
             amount = input(f"\033[95m ~~~~~~input amount~~~~~~ \033[0m \n")
             print(f"\033[94m {db.update_user_score(username, amount)} \033[0m")
+        elif value == "tables":
+            print(f"\033[94m {game_state} \033[0m")
 
 
 def main():
     """Main function for the server"""
     server_socket = setup_socket()
     print("Server is listening for clients...")
-
     server_thread = threading.Thread(target=handle_server_message, args=())
     server_thread.start()
     while True:
