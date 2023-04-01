@@ -16,7 +16,8 @@ PROTOCOL_CLIENT = {'login_msg': 'LOGIN',
                    'join_seat': "JOIN_SEAT",
                    "leave_seat": "LEAVE_SEAT",
                    'join_table': "JOIN_TABLE",
-                   'leave_table': "LEAVE_TABLE"}
+                   'leave_table': "LEAVE_TABLE",
+                   "leave_game": "LEAVE_GAME"}
 PROTOCOL_SERVER = {'login_ok_msg': 'LOGIN_OK',
                    'login_failed_msg': 'ERROR',
                    'register_ok_msg': "REGISTER_OK",
@@ -25,6 +26,7 @@ PROTOCOL_SERVER = {'login_ok_msg': 'LOGIN_OK',
                    'leaderboard_ok': 'LEADERBOARD_OK',
                    'join_seat_ok': "JOIN_SEAT_OK",
                    'leave_seat_ok': "LEAVE_SEAT_OK",
+                   'leave_table_ok': "leave_table_ok",
                    'error_msg': 'ERROR'}
 ERROR = None
 

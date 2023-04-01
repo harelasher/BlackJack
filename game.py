@@ -6,6 +6,12 @@ from t import *
 import ast
 import time
 
+import queue
+import threading
+
+information_queue = queue.Queue()
+stop_event = threading.Event()
+
 # available chars for the username/password
 available_chars = string.ascii_lowercase + string.digits
 
@@ -727,13 +733,50 @@ def leaderboard_menu(conn, user_info):
         clock.tick(120)
 
 
-def getting_response(conn):
-    pass
+def receive_information_from_server(conn):
+    while not stop_event.is_set():
+        # replace this with your code to receive information from the server
+        cmd, msg = recv_message_and_parse(conn)
+        if msg:
+            # add received information to the queue
+            information_queue.put(msg)
+    print("--closed thread--")
 
 
 def table1(conn, user_info):
-    cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["join_table"], "0")
-    game_state = ast.literal_eval(str(msg))
+    stop_event.clear()
+    server_thread = threading.Thread(target=receive_information_from_server, args=(conn, ))
+    server_thread.start()
+    build_and_send_message(conn, PROTOCOL_CLIENT["join_table"], "0")
+
+    game_state = {
+        "seats": [
+            {
+                "name": None,
+                "profile_picture": None,
+                "cards": None,
+                "bet": None
+            },
+            {
+                "name": None,
+                "profile_picture": None,
+                "cards": None,
+                "bet": None
+            },
+            {
+                "name": None,
+                "profile_picture": None,
+                "cards": None,
+                "bet": None
+            }
+        ],
+        "dealer": {
+            "cards": None,
+            "is_showing": False
+        },
+        "is_game_over": False,
+        "winner": None
+    }
 
     offset_x = None
     scroll_value = 0
@@ -745,7 +788,14 @@ def table1(conn, user_info):
     right_button_rect = pygame.Rect(scroll_bar_rect.x + scroll_bar_rect.w + 10, scroll_bar_rect.y - 5, 30, 30)
 
     taken_seat = None
+
     while True:
+        try:
+            information = information_queue.get_nowait()
+            game_state = ast.literal_eval(str(information))
+        except queue.Empty:
+            pass
+
         bj_screen()
         screen.blit(bj_table, (-10, 0))
 
@@ -761,6 +811,12 @@ def table1(conn, user_info):
         bet_amount_button = pygame.Rect(scroll_bar_rect.x - 50, 510, scroll_bar_rect.w + 100, 80)
         profile_picture = pygame.transform.scale(pfp_pictures[user_info[4]], (70, 70))
 
+        mone = None
+        for i in range(len(game_state["seats"])):
+            if game_state["seats"][i]["name"] == user_info[1]:
+                mone = i
+        taken_seat = mone
+
         if taken_seat is None:
             table_seat1_noWidth = circle_surface("black", 32, 200, 400, 3)  # (center coordinates), radius
             table_seat1 = circle_surface("black", 32, 200, 400)
@@ -769,14 +825,12 @@ def table1(conn, user_info):
             draw_text("sit", HelveticaFont, "white", screen, 200, 390)
             draw_text("here", HelveticaFont, "white", screen, 200, 404)
 
-
             table_seat2_noWidth = circle_surface("black", 32, 400, 475, 3)  # (center coordinates), radius
             table_seat2 = circle_surface("black", 32, 400, 475)
             table_seat2_mask = pygame.mask.from_surface(table_seat2)
             screen.blit(table_seat2_noWidth, (0, 0))
             draw_text("sit", HelveticaFont, "white", screen, 400, 465)
             draw_text("here", HelveticaFont, "white", screen, 400, 479)
-
 
             table_seat3_noWidth = circle_surface("black", 32, 595, 400, 3)  # (center coordinates), radius
             table_seat3 = circle_surface("black", 32, 595, 400)
@@ -785,18 +839,23 @@ def table1(conn, user_info):
             draw_text("sit", HelveticaFont, "white", screen, 595, 390)
             draw_text("here", HelveticaFont, "white", screen, 595, 404)
 
-        if game_state["seats"][0]["address"] is not None:
+        if game_state["seats"][0]["name"] is not None:
             profile_rect = profile_picture.get_rect(center=(200, 400))
             screen.blit(pygame.transform.scale(pfp_pictures[int(game_state["seats"][0]["profile_picture"])],
                                                (70, 70)), profile_rect)
-        if game_state["seats"][1]["address"] is not None:
+            draw_text(game_state["seats"][0]["name"], HelveticaFont, "white", screen, 200, 435)
+
+        if game_state["seats"][1]["name"] is not None:
             profile_rect = profile_picture.get_rect(center=(400, 475))
             screen.blit(pygame.transform.scale(pfp_pictures[int(game_state["seats"][1]["profile_picture"])],
                                                (70, 70)), profile_rect)
-        if game_state["seats"][2]["address"] is not None:
+            draw_text(game_state["seats"][1]["name"], HelveticaFont, "white", screen, 400, 510)
+
+        if game_state["seats"][2]["name"] is not None:
             profile_rect = profile_picture.get_rect(center=(595, 400))
             screen.blit(pygame.transform.scale(pfp_pictures[int(game_state["seats"][2]["profile_picture"])],
                                                (70, 70)), profile_rect)
+            draw_text(game_state["seats"][2]["name"], HelveticaFont, "white", screen, 595, 435)
 
         if taken_seat is not None:
             screen.blit(hit_button, (0, 0))
@@ -812,7 +871,6 @@ def table1(conn, user_info):
             pygame.draw.rect(screen, "black", bet_amount_button)
             draw_text("bet amount", HelveticaFont, "white", screen, bet_amount_button.x + bet_amount_button.w / 2,
                       bet_amount_button.y + 10)
-
 
             ##########
             MAX_VALUE = user_info[2]
@@ -848,48 +906,42 @@ def table1(conn, user_info):
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                stop_event.set()
+                build_and_send_message(conn, PROTOCOL_CLIENT["leave_game"],
+                                       '0' + DATA_DELIMITER + str(taken_seat))
+                server_thread.join()
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     if taken_seat is not None:
-                        cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["leave_seat"],
-                                                         '0' + DATA_DELIMITER + str(taken_seat))
-                        game_state = ast.literal_eval(msg)
+                        build_and_send_message(conn, PROTOCOL_CLIENT["leave_seat"],
+                                               '0' + DATA_DELIMITER + str(taken_seat))
                         taken_seat = None
                     else:
-                        print(111111111111111111111111111111111111)
+                        stop_event.set()
                         build_and_send_message(conn, PROTOCOL_CLIENT["leave_table"], "0")
-
+                        server_thread.join()
                         return user_info
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if table_seat1_mask.get_rect().collidepoint(event.pos) and \
                         table_seat1_mask.get_at(
                             (event.pos[0] - table_seat1_mask.get_rect().x,
-                             event.pos[1] - table_seat1_mask.get_rect().y)) and taken_seat is None:
-                    cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["join_seat"],
+                             event.pos[1] - table_seat1_mask.get_rect().y)) and taken_seat is None and game_state["seats"][0]["name"] is None:
+                    build_and_send_message(conn, PROTOCOL_CLIENT["join_seat"],
                                                      '0' + DATA_DELIMITER + '0')
-                    if cmd != "ERROR":
-                        taken_seat = 0
-                        game_state = ast.literal_eval(msg)
                 elif table_seat2.get_rect().collidepoint(event.pos) and \
                         table_seat2_mask.get_at(
                             (event.pos[0] - table_seat2_mask.get_rect().x,
-                             event.pos[1] - table_seat2_mask.get_rect().y)) and taken_seat is None:
-                    cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["join_seat"],
+                             event.pos[1] - table_seat2_mask.get_rect().y)) and taken_seat is None and game_state["seats"][1]["name"] is None:
+                    build_and_send_message(conn, PROTOCOL_CLIENT["join_seat"],
                                                      '0' + DATA_DELIMITER + '1')
-                    if cmd != "ERROR":
-                        taken_seat = 1
-                        game_state = ast.literal_eval(msg)
                 elif table_seat3_mask.get_rect().collidepoint(event.pos) and \
                         table_seat3_mask.get_at(
                             (event.pos[0] - table_seat3_mask.get_rect().x,
-                             event.pos[1] - table_seat3_mask.get_rect().y)) and taken_seat is None:
-                    cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["join_seat"],
+                             event.pos[1] - table_seat3_mask.get_rect().y)) and taken_seat is None and game_state["seats"][2]["name"] is None:
+                    build_and_send_message(conn, PROTOCOL_CLIENT["join_seat"],
                                                      '0' + DATA_DELIMITER + '2')
-                    if cmd != "ERROR":
-                        taken_seat = 2
-                        game_state = ast.literal_eval(msg)
                 if taken_seat is not None:
                     if hit_mask.get_rect().collidepoint(event.pos) and \
                             hit_mask.get_at(
@@ -906,6 +958,10 @@ def table1(conn, user_info):
                     elif scroll_bar_rect.collidepoint(event.pos):
                         # Set the offset for the scroll handle
                         scroll_handle_rect.x = event.pos[0] - scroll_handle_rect.w / 2
+                        if scroll_handle_rect.x < scroll_bar_rect.x:
+                            scroll_handle_rect.x = scroll_bar_rect.x
+                        elif scroll_handle_rect.x + scroll_handle_rect.w > scroll_bar_rect.x + scroll_bar_rect.w:
+                            scroll_handle_rect.x = scroll_bar_rect.x + scroll_bar_rect.w - scroll_handle_rect.w
                         scroll_value = int((scroll_handle_rect.x - scroll_bar_rect.left) / (
                                 scroll_bar_rect.width - scroll_handle_rect.width) * MAX_VALUE)
                         offset_x = 1
@@ -945,7 +1001,7 @@ def table1(conn, user_info):
         # pygame.draw.rect(screen, 'black', cursor)
         pygame.display.update()
         clock.tick(120)
-        print(game_state)
+        # print(game_state)
 
 
 def help_menu(conn, user_info):

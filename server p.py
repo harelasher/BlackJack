@@ -13,21 +13,18 @@ logged_users = {}
 game_state = {
     "seats": [
         {
-            "address": None,
             "name": None,
             "profile_picture": None,
             "cards": None,
             "bet": None
         },
         {
-            "address": None,
             "name": None,
             "profile_picture": None,
             "cards": None,
             "bet": None
         },
         {
-            "address": None,
             "name": None,
             "profile_picture": None,
             "cards": None,
@@ -38,13 +35,67 @@ game_state = {
         "cards": None,
         "is_showing": False
     },
-    "is_game_over": False,
+    "is_game_over": True,
     "winner": None
 }
 all_players_table1 = {}
-game_state2 = {}
+game_state2 = {
+    "seats": [
+        {
+            "name": None,
+            "profile_picture": None,
+            "cards": None,
+            "bet": None
+        },
+        {
+            "name": None,
+            "profile_picture": None,
+            "cards": None,
+            "bet": None
+        },
+        {
+            "name": None,
+            "profile_picture": None,
+            "cards": None,
+            "bet": None
+        }
+    ],
+    "dealer": {
+        "cards": None,
+        "is_showing": False
+    },
+    "is_game_over": True,
+    "winner": None
+}
 all_players_table2 = {}
-game_state3 = {}
+game_state3 = {
+    "seats": [
+        {
+            "name": None,
+            "profile_picture": None,
+            "cards": None,
+            "bet": None
+        },
+        {
+            "name": None,
+            "profile_picture": None,
+            "cards": None,
+            "bet": None
+        },
+        {
+            "name": None,
+            "profile_picture": None,
+            "cards": None,
+            "bet": None
+        }
+    ],
+    "dealer": {
+        "cards": None,
+        "is_showing": False
+    },
+    "is_game_over": True,
+    "winner": None
+}
 all_players_table3 = {}
 tables = [game_state, game_state2, game_state3]
 all_table_players = [all_players_table1, all_players_table2, all_players_table3]
@@ -72,6 +123,7 @@ def handle_login_message(conn, data, address):
 def handle_logout_message(username, address):
     logged_users[address] = ""
     db.logout(username)
+    del logged_users[address]
     print(f'logout username: ({username}) OK')
 
 
@@ -100,13 +152,11 @@ def handle_leaderboard_message(conn):
 
 def handle_join_seat(conn, data, address):
     chosen_table, chosen_seat = data.split("#")[0], data.split("#")[1]
-    if tables[int(chosen_table)]["seats"][int(chosen_seat)]["address"] is not None:
+    if tables[int(chosen_table)]["seats"][int(chosen_seat)]["name"] is not None:
         return build_and_send_message(conn, PROTOCOL_SERVER['error_msg'], "")
     for user in logged_users:
         if user == address:
-            print("111")
             user_info = db.get_user_info(logged_users[user])
-            tables[int(chosen_table)]["seats"][int(chosen_seat)]["address"] = user
             tables[int(chosen_table)]["seats"][int(chosen_seat)]["name"] = user_info[1]
             tables[int(chosen_table)]["seats"][int(chosen_seat)]["profile_picture"] = user_info[4]
     for player in all_table_players[int(chosen_table)].values():
@@ -115,36 +165,55 @@ def handle_join_seat(conn, data, address):
 
 def handle_leave_seat(conn, data, address):
     chosen_table, chosen_seat = data.split("#")[0], data.split("#")[1]
-    if tables[int(chosen_table)]["seats"][int(chosen_seat)]["address"] is None:
+    if tables[int(chosen_table)]["seats"][int(chosen_seat)]["name"] is None:
         return build_and_send_message(conn, PROTOCOL_SERVER['error_msg'], "")
-    tables[int(chosen_table)]["seats"][int(chosen_seat)]["address"] = None
     tables[int(chosen_table)]["seats"][int(chosen_seat)]["name"] = None
-    tables[int(chosen_table)]["seats"][int(chosen_seat)]["name"] = None
+    tables[int(chosen_table)]["seats"][int(chosen_seat)]["profile_picture"] = None
     for player in all_table_players[int(chosen_table)].values():
         build_and_send_message(player, PROTOCOL_SERVER['leaderboard_ok'], str(tables[int(chosen_table)]))
 
 
 def handle_join_table(conn, data, address):
-    all_table_players[int(data)][address] = conn
-    for player in all_table_players[int(data)].values():
-        build_and_send_message(player, PROTOCOL_SERVER['leaderboard_ok'], str(tables[int(data)]))
+    all_table_players[int(data)][logged_users[address]] = conn
+    build_and_send_message(conn, PROTOCOL_SERVER['leaderboard_ok'], str(tables[int(data)]))
 
 
 def handle_leave_table(conn, data, address):
-    del all_table_players[int(data)][address]
+    del all_table_players[int(data)][logged_users[address]]
+    build_and_send_message(conn, PROTOCOL_SERVER['leave_table_ok'], "")
+
+
+def handle_leave_game(conn, data, address):
+    build_and_send_message(conn, PROTOCOL_SERVER['leave_table_ok'], "")
 
 
 def handle_client_message(client_socket, address):
     """Handles messages from a single client"""
     logged_users.update({address: ""})
     while True:
-        cmd, msg = recv_message_and_parse(client_socket)
+        try:
+            cmd, msg = recv_message_and_parse(client_socket)
+        except ConnectionResetError or OSError:
+            cmd, msg = ERROR, ERROR
         print(cmd, msg, address)
         if cmd == ERROR or msg == ERROR:
-            handle_logout_message(logged_users[address], address)
-            del logged_users[address]
+            if address in logged_users:
+                handle_logout_message(logged_users[address], address)
             print(f"~connection stopped {address}~")
             client_socket.close()
+            for i in range(len(all_table_players)):
+                for key in all_table_players[i]:
+                    if all_table_players[i][key] == client_socket:
+                        for j in range(len(tables[i]["seats"])):
+                            print(tables[i]['is_game_over'] is True)
+                            print(tables[i]["seats"][j]["name"])
+                            print(all_table_players[i][key])
+                            if tables[i]["seats"][j]["name"] == key and tables[i]['is_game_over'] is True:
+                                del all_table_players[i][key]
+                                handle_leave_seat(client_socket, str(i) + DATA_DELIMITER + str(j), address)
+                                pass
+                        del all_table_players[i][key]
+                        break
             break
         elif cmd == PROTOCOL_CLIENT['login_msg']:
             handle_login_message(client_socket, msg, address)
@@ -164,7 +233,8 @@ def handle_client_message(client_socket, address):
             handle_join_table(client_socket, msg, address)
         elif cmd == PROTOCOL_CLIENT["leave_table"]:
             handle_leave_table(client_socket, msg, address)
-
+        elif cmd == PROTOCOL_CLIENT["leave_game"]:
+            handle_leave_game(client_socket, msg, address)
     client_socket.close()
 
 
@@ -179,6 +249,8 @@ def handle_server_message():
             print(f"\033[94m {db.update_user_score(username, amount)} \033[0m")
         elif value == "tables":
             print(f"\033[94m {game_state} \033[0m")
+        elif value == "players":
+            print(f"\033[94m {all_players_table1} \033[0m")
 
 
 def main():
