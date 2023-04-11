@@ -745,25 +745,6 @@ def receive_information_from_server(conn):
     print("--closed thread--")
 
 
-def draw_timer(screen, start_time, close_time, current_time):
-    # Calculate the elapsed time
-    elapsed_time = current_time - start_time
-    remaining_time = max(close_time - current_time, 0)
-
-    # Calculate the width of the timer bar
-    total_width = 400
-    bar_width = int(total_width * remaining_time / (close_time - start_time))
-
-    # Draw the timer bar and rectangle
-    pygame.draw.rect(screen, (0, 0, 0), (50, 50, total_width, 20))
-    pygame.draw.rect(screen, (255, 0, 0), (50, 50, bar_width, 20))
-
-    # Add text to the timer bar
-    font = pygame.font.SysFont(None, 25)
-    text = font.render("Time remaining: {:.1f} seconds".format(remaining_time), True, (0, 0, 0))
-    screen.blit(text, [50, 110])
-
-
 def table1(conn, user_info):
     stop_event.clear()
     server_thread = threading.Thread(target=receive_information_from_server, args=(conn, ))
@@ -771,38 +752,47 @@ def table1(conn, user_info):
     build_and_send_message(conn, PROTOCOL_CLIENT["join_table"], "0")
 
     game_state = {
-        "seats": [
-            {
-                "name": None,
-                "profile_picture": None,
-                "cards": None,
-                "bet": None
-            },
-            {
-                "name": None,
-                "profile_picture": None,
-                "cards": None,
-                "bet": None
-            },
-            {
-                "name": None,
-                "profile_picture": None,
-                "cards": None,
-                "bet": None
-            }
-        ],
-        "dealer": {
-            "cards": None,
-            "is_showing": False
+    "seats": [
+        {
+            "name": None,
+            "profile_picture": None,
+            "cards": [],
+            "bet": None,
+            "reaction": None,
+            "result": [None, None],
+            "wlp": None
         },
-        "is_game_over": True,
-        "timer": [None, None, None],
-        "winner": None
-    }
+        {
+            "name": None,
+            "profile_picture": None,
+            "cards": [],
+            "bet": None,
+            "reaction": None,
+            "result": [None, None],
+            "wlp": None
+        },
+        {
+            "name": None,
+            "profile_picture": None,
+            "cards": [],
+            "bet": None,
+            "reaction": None,
+            "result": [None, None],
+            "wlp": None
+        }
+    ],
+    "dealer": {
+        "cards": [],
+        "result": [None, None]
+    },
+    "is_game_over": True,
+    "timer": [None, None, None]
+}
 
     offset_x = None
     scroll_value = 0
     scroll_bar_rect = pygame.Rect(52, 550, 300, 20)
+    value_bet = 0
 
     # Define the rectangle of the scroll bar handle
     scroll_handle_rect = pygame.Rect(scroll_bar_rect.x, scroll_bar_rect.y - 5, 20, 30)
@@ -810,10 +800,18 @@ def table1(conn, user_info):
     right_button_rect = pygame.Rect(scroll_bar_rect.x + scroll_bar_rect.w + 10, scroll_bar_rect.y - 5, 30, 30)
 
     bone = True
+    remaining_time = 1
     while True:
         try:
             information = information_queue.get_nowait()
-            game_state = ast.literal_eval(str(information))
+            var = ast.literal_eval(information)
+            if len(var) == 8:
+                user_info = var
+            else:
+                if var["timer"] != game_state["timer"]:
+                    bone = True
+                game_state = var
+            print(var)
         except queue.Empty:
             pass
 
@@ -870,6 +868,12 @@ def table1(conn, user_info):
             draw_text(game_state["seats"][0]["name"], HelveticaFont, "white", screen, 200, 435)
             if game_state["seats"][0]["bet"] is not None:
                 draw_text(game_state["seats"][0]["bet"], HelveticaFont, "white", screen, 200, 375)
+            if game_state["seats"][0]["result"] is not None:
+                draw_text(game_state["seats"][0]["result"][0], HelveticaFont, "black", screen, 200, 325)
+                if game_state["seats"][0]["result"][1] is not None:
+                    draw_text(game_state["seats"][0]["result"][1], HelveticaFont, "black", screen, 200, 300)
+            if game_state["seats"][0]["wlp"] is not None:
+                draw_text(game_state["seats"][0]["wlp"], ButtonFont, "black", screen, 200, 400)
 
         if game_state["seats"][1]["name"] is not None:
             profile_rect = profile_picture.get_rect(center=(400, 475))
@@ -878,6 +882,12 @@ def table1(conn, user_info):
             draw_text(game_state["seats"][1]["name"], HelveticaFont, "white", screen, 400, 510)
             if game_state["seats"][1]["bet"] is not None:
                 draw_text(game_state["seats"][1]["bet"], HelveticaFont, "white", screen, 400, 450)
+            if game_state["seats"][1]["result"] is not None:
+                draw_text(game_state["seats"][1]["result"][0], HelveticaFont, "black", screen, 400, 400)
+                if game_state["seats"][1]["result"][1] is not None:
+                    draw_text(game_state["seats"][1]["result"][1], HelveticaFont, "black", screen, 400, 375)
+            if game_state["seats"][1]["wlp"] is not None:
+                draw_text(game_state["seats"][1]["wlp"], ButtonFont, "black", screen, 400, 475)
 
         if game_state["seats"][2]["name"] is not None:
             profile_rect = profile_picture.get_rect(center=(595, 400))
@@ -886,8 +896,15 @@ def table1(conn, user_info):
             draw_text(game_state["seats"][2]["name"], HelveticaFont, "white", screen, 595, 435)
             if game_state["seats"][2]["bet"] is not None:
                 draw_text(game_state["seats"][2]["bet"], HelveticaFont, "white", screen, 595, 375)
-        client_time = time.time()
+            if game_state["seats"][2]["result"] is not None:
+                draw_text(game_state["seats"][2]["result"][0], HelveticaFont, "black", screen, 595, 325)
+                if game_state["seats"][2]["result"][1] is not None:
+                    draw_text(game_state["seats"][2]["result"][1], HelveticaFont, "black", screen, 595, 300)
+            if game_state["seats"][2]["wlp"] is not None:
+                draw_text(game_state["seats"][2]["wlp"], ButtonFont, "black", screen, 595, 400)
 
+        if game_state["dealer"]["result"][0] is not None:
+            draw_text(game_state["dealer"]["result"][0], HelveticaFont, "black", screen, 400, 300)
         if game_state["timer"][0] is not None and bone:
             start_time, close_time, server_current_time = game_state["timer"]
             client_current_time = time.time()
@@ -899,28 +916,40 @@ def table1(conn, user_info):
             adjusted_start_time = start_time + time_diff
             adjusted_close_time = close_time + time_diff
             bone = False
-
         if game_state["timer"][0] is not None and not bone:
             current_time = time.time()
             remaining_time = max(adjusted_close_time - current_time, 0)
+            if remaining_time == 0:
+                bone = True
+                game_state["timer"] = [None, None, None]
+                print("new ", game_state)
             total_width = 300
             bar_width = int(total_width * remaining_time / (adjusted_close_time - adjusted_start_time))
             pygame.draw.rect(screen, (0, 0, 0), (250, 150, total_width, 20))
             pygame.draw.rect(screen, (255, 0, 0), (250, 150, bar_width, 20))
             font = pygame.font.SysFont(None, 25)
-            text = font.render("Time remaining to react: {:.1f} seconds".format(remaining_time), True, (0, 0, 0))
+            text = font.render("Time Remaining To React: {:.1f}s".format(remaining_time), True, "white")
             if game_state["is_game_over"]:
-                text = font.render("Time remaining to bet: {:.1f} seconds".format(remaining_time), True, (0, 0, 0))
-            screen.blit(text, [255, 170])
-            if remaining_time == 0:
-                bone = True
+                text = font.render("Time Remaining To Bet: {:.1f}s".format(remaining_time), True, "white")
+            # elif len(game_state["dealer"]["cards"]) > 1:
+            #     text = font.render("Finishing Game...".format(remaining_time), True, "white")
+            text_rec = text.get_rect(center=(250 + total_width/2, 150 + 20/2))
+            screen.blit(text, text_rec)
 
         if taken_seat is not None:
+            if len(game_state["seats"][taken_seat]["cards"]) > 0 and game_state["seats"][taken_seat]["reaction"] is None and game_state["seats"][taken_seat]["result"][1] is None and len(game_state["dealer"]["cards"]) == 1 and remaining_time != 0:
+                hit_button = circle_surface("green", 50, 70, 180)  # (center coordinates), radius
+
             screen.blit(hit_button, (0, 0))
             draw_text("hit", HelveticaFont, "white", screen, 70, 180)
 
+            if len(game_state["seats"][taken_seat]["cards"]) > 0 and game_state["seats"][taken_seat]["reaction"] is None and game_state["seats"][taken_seat]["result"][1] is None and len(game_state["dealer"]["cards"]) == 1 and remaining_time != 0:
+                stand_button = circle_surface("red", 50, 70, 180 + 120)  # (center coordinates), radius
             screen.blit(stand_button, (0, 0))
             draw_text("stand", HelveticaFont, "white", screen, 70, 180 + 120)
+
+            if len(game_state["seats"][taken_seat]["cards"]) > 0 and user_info[2] >= value_bet*2 and game_state["seats"][taken_seat]["reaction"] is None and game_state["seats"][taken_seat]["result"][1] is None and len(game_state["seats"][taken_seat]["cards"]) == 2 and len(game_state["dealer"]["cards"]) == 1 and remaining_time != 0:
+                double_down_button = circle_surface("purple", 50, 70, 180 + 120 + 120)  # (center coordinates), radius
 
             screen.blit(double_down_button, (0, 0))
             draw_text("double", HelveticaFont, "white", screen, 70, 180 + 120 + 120 - 7)
@@ -964,7 +993,7 @@ def table1(conn, user_info):
 
             pygame.draw.rect(screen, 'black', bet_rect)
             pygame.draw.rect(screen, 'black', undo_rect)
-            if scroll_value != 0 and game_state["is_game_over"] is True:
+            if scroll_value != 0 and game_state["is_game_over"] is True and game_state["seats"][taken_seat]["bet"] is None:
                 pygame.draw.rect(screen, 'green', bet_rect)
             if game_state["seats"][taken_seat]["bet"] is not None and game_state["is_game_over"] is True:
                 pygame.draw.rect(screen, 'red', undo_rect)
@@ -985,7 +1014,7 @@ def table1(conn, user_info):
                         build_and_send_message(conn, PROTOCOL_CLIENT["leave_seat"],
                                                '0' + DATA_DELIMITER + str(taken_seat))
                         taken_seat = None
-                    else:
+                    elif taken_seat is None:
                         stop_event.set()
                         build_and_send_message(conn, PROTOCOL_CLIENT["leave_table"], "0")
                         server_thread.join()
@@ -1015,18 +1044,23 @@ def table1(conn, user_info):
                 if taken_seat is not None:
                     if hit_mask.get_rect().collidepoint(event.pos) and \
                             hit_mask.get_at(
-                                (event.pos[0] - hit_mask.get_rect().x, event.pos[1] - hit_mask.get_rect().y)):
+                                (event.pos[0] - hit_mask.get_rect().x, event.pos[1] - hit_mask.get_rect().y))\
+                            and not game_state["is_game_over"] and remaining_time != 0 and game_state["seats"][taken_seat]["reaction"] is None and game_state["seats"][taken_seat]["result"][1] is None and len(game_state["dealer"]["cards"]) == 1 and remaining_time != 0:
                         build_and_send_message(conn, PROTOCOL_CLIENT["reaction"],
                                                '0' + DATA_DELIMITER + str(taken_seat) + DATA_DELIMITER + "hit")
-                    if stand_mask.get_rect().collidepoint(event.pos) and \
+                    elif stand_mask.get_rect().collidepoint(event.pos) and \
                             stand_mask.get_at(
-                                (event.pos[0] - stand_mask.get_rect().x, event.pos[1] - stand_mask.get_rect().y)):
-                        print("stand")
+                                (event.pos[0] - stand_mask.get_rect().x, event.pos[1] - stand_mask.get_rect().y))\
+                            and not game_state["is_game_over"] and remaining_time != 0 and game_state["seats"][taken_seat]["reaction"] is None and game_state["seats"][taken_seat]["result"][1] is None and len(game_state["dealer"]["cards"]) == 1and remaining_time != 0:
+                        build_and_send_message(conn, PROTOCOL_CLIENT["reaction"],
+                                               '0' + DATA_DELIMITER + str(taken_seat) + DATA_DELIMITER + "stand")
                     elif double_down_mask.get_rect().collidepoint(event.pos) and \
                             double_down_mask.get_at((event.pos[0] - double_down_mask.get_rect().x,
-                                                     event.pos[1] - double_down_mask.get_rect().y)):
-                        print("double_down")
-                    elif scroll_bar_rect.collidepoint(event.pos):
+                                                     event.pos[1] - double_down_mask.get_rect().y))\
+                            and not game_state["is_game_over"] and remaining_time != 0 and user_info[2] >= scroll_value*2 and game_state["seats"][taken_seat]["reaction"] is None and game_state["seats"][taken_seat]["result"][1] is None and len(game_state["seats"][taken_seat]["cards"]) == 2 and len(game_state["dealer"]["cards"]) == 1 and remaining_time != 0:
+                        build_and_send_message(conn, PROTOCOL_CLIENT["reaction"],
+                                               '0' + DATA_DELIMITER + str(taken_seat) + DATA_DELIMITER + "double_down")
+                    elif scroll_bar_rect.collidepoint(event.pos) and game_state["seats"][taken_seat]["bet"] is None:
                         # Set the offset for the scroll handle
                         scroll_handle_rect.x = event.pos[0] - scroll_handle_rect.w / 2
                         if scroll_handle_rect.x < scroll_bar_rect.x:
@@ -1036,21 +1070,25 @@ def table1(conn, user_info):
                         scroll_value = int((scroll_handle_rect.x - scroll_bar_rect.left) / (
                                 scroll_bar_rect.width - scroll_handle_rect.width) * MAX_VALUE)
                         offset_x = 1
-                    elif left_button_rect.collidepoint(event.pos):
+                    elif left_button_rect.collidepoint(event.pos) and game_state["seats"][taken_seat]["bet"] is None:
                         scroll_value = max(0, scroll_value - 1)
                         scroll_handle_rect.x = int(
                             scroll_bar_rect.left + scroll_value / MAX_VALUE * (
                                     scroll_bar_rect.width - scroll_handle_rect.width))
                         offset_x = None
-                    elif right_button_rect.collidepoint(event.pos):
+                    elif right_button_rect.collidepoint(event.pos) and game_state["seats"][taken_seat]["bet"] is None:
                         scroll_value = min(MAX_VALUE, scroll_value + 1)
                         scroll_handle_rect.x = int(
                             scroll_bar_rect.left + scroll_value / MAX_VALUE * (
                                     scroll_bar_rect.width - scroll_handle_rect.width))
                         offset_x = None
-                    elif bet_rect.collidepoint(event.pos) and scroll_value != 0 and game_state["is_game_over"] is True:
+                    elif bet_rect.collidepoint(event.pos) and scroll_value != 0 and game_state["is_game_over"] is True\
+                            and game_state["seats"][taken_seat]["bet"] is None:
+                        value_bet = scroll_value
+                        scroll_value = 0
+                        scroll_handle_rect.x = scroll_bar_rect.x
                         build_and_send_message(conn, PROTOCOL_CLIENT["change_bet"],
-                                               '0' + DATA_DELIMITER + str(taken_seat) + DATA_DELIMITER + str(scroll_value))
+                                               '0' + DATA_DELIMITER + str(taken_seat) + DATA_DELIMITER + str(value_bet))
                     elif undo_rect.collidepoint(event.pos) and game_state["seats"][taken_seat]["bet"] is not None and\
                             game_state["is_game_over"] is True:
                         build_and_send_message(conn, PROTOCOL_CLIENT["change_bet"],
@@ -1079,7 +1117,6 @@ def table1(conn, user_info):
         # pygame.draw.rect(screen, 'black', cursor)
         pygame.display.update()
         clock.tick(fps)
-        # print(game_state)
 
 
 def help_menu(conn, user_info):

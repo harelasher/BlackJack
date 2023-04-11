@@ -109,3 +109,17 @@ class Database:
         self.cursor.execute("SELECT username, pfp_pic, highscore FROM users ORDER BY highscore DESC LIMIT 5")
         top_users = self.cursor.fetchall()
         return top_users
+
+    def update_win_loss_push(self, username, result):
+        self.cursor.execute("SELECT WinLossPush FROM users WHERE username=?", (username,))
+        win_loss_push_str = self.cursor.fetchone()[0]
+        win_loss_push = list(map(int, win_loss_push_str.split("/")))
+        if result == "win":
+            win_loss_push[0] += 1
+        elif result == "loss":
+            win_loss_push[1] += 1
+        else:
+            win_loss_push[2] += 1
+        win_loss_push_str = "/".join(map(str, win_loss_push))
+        self.cursor.execute("UPDATE users SET WinLossPush=? WHERE username=?", (win_loss_push_str, username))
+        self.conn.commit()
