@@ -60,6 +60,10 @@ pygame.display.set_caption("BlackJack")
 icon = pygame.image.load('Pictures/BJ.png')
 pygame.display.set_icon(icon)
 
+visual_eye = pygame.transform.scale(pygame.image.load('Pictures/visual eye.png'), (50, 50))
+left_arrow = pygame.transform.scale(pygame.image.load('Pictures/left-arrow.png'), (64, 64))
+right_arrow = pygame.transform.rotate(pygame.transform.scale(pygame.image.load('Pictures/left-arrow.png'),
+                                                             (64, 64)), 180)
 # Avatars
 # **screen.blit(Man, (display_width / 1.15, 120 // 2 - 32))**
 Man = pygame.image.load('Pictures/Man.png').convert_alpha()
@@ -79,6 +83,17 @@ first_place = pygame.image.load('Pictures/1st_medal.png').convert_alpha()
 second_place = pygame.image.load('Pictures/2nd_medal.png').convert_alpha()
 third_place = pygame.image.load('Pictures/3rd_medal.png').convert_alpha()
 all_medals = [first_place, second_place, third_place]
+
+card_names = [
+    "2c", "3c", "4c", "5c", "6c", "7c", "8c", "9c", "10c", "jc", "qc", "kc", "ac",
+    "2d", "3d", "4d", "5d", "6d", "7d", "8d", "9d", "10d", "jd", "qd", "kd", "ad",
+    "2h", "3h", "4h", "5h", "6h", "7h", "8h", "9h", "10h", "jh", "qh", "kh", "ah",
+    "2s", "3s", "4s", "5s", "6s", "7s", "8s", "9s", "10s", "js", "qs", "ks", "as"
+]
+cards = {}
+for card_name in card_names:
+    card_image = pygame.image.load(f"cards/{card_name}.png")
+    cards[card_name] = pygame.transform.scale(card_image, (48, 68))
 
 bj_table = pygame.image.load('Pictures/blackjack_table.png').convert_alpha()
 # Fonts
@@ -191,28 +206,50 @@ def login_menu(conn):
     active_password = False
     username_txt = ""
     password_txt = ""
+    hide_password = True
+    visual_eye.set_alpha(128)
+    username_button = pygame.Rect(265, 240, 270, 60)
+
+    password_button = pygame.Rect(username_button.x, username_button.y + 90, username_button.w,
+                                  username_button.h)
+
+    enter_button = pygame.Rect(username_button.x + 70, password_button.y + 90, username_button.w - 140,
+                               username_button.h)
     while True:
         bj_screen()
-
         draw_text("login", ButtonFont, (255, 255, 255), screen, display_width // 2, 232 - 40)
 
-        username_button = pygame.Rect(265, 240, 270, 60)
-        pygame.draw.rect(screen, "white", username_button, 3, border_radius=10)
-
-        password_button = pygame.Rect(username_button.x, username_button.y + 90, username_button.w,
-                                      username_button.h)
-        pygame.draw.rect(screen, "white", password_button, 3, border_radius=10)
-
-        enter_button = pygame.Rect(username_button.x + 70, password_button.y + 90, username_button.w - 140,
-                                   username_button.h)
-        pygame.draw.rect(screen, "white", enter_button, 3)
+        if len(password_txt) == 0:
+            text_surf = HelveticaFont.render('password', True, "black")
+            text_surf.set_alpha(111)
+            text_rect = text_surf.get_rect(center=(password_button.x + password_button.w/2, password_button.y
+                                                   + password_button.h/2))
+            screen.blit(text_surf, text_rect)
+        if len(username_txt) == 0:
+            text_surf = HelveticaFont.render('username', True, "black")
+            text_surf.set_alpha(111)
+            text_rect = text_surf.get_rect(center=(username_button.x + username_button.w/2, username_button.y
+                                                   + username_button.h/2))
+            screen.blit(text_surf, text_rect)
         draw_text("enter", ButtonFont, (255, 255, 255), screen, (enter_button.x + enter_button.w // 2),
                   (enter_button.y + enter_button.h // 2))
 
         draw_text(username_txt, ButtonFont, (255, 255, 255), screen, username_button.x + username_button.w // 2,
                   username_button.y + username_button.h // 2)
-        draw_text(password_txt, ButtonFont, (255, 255, 255), screen, password_button.x + password_button.w // 2,
-                  password_button.y + password_button.h // 2)
+        visual_eye_rec = pygame.Rect(password_button.x + password_button.w, password_button.y+4, visual_eye.get_rect().w
+                                     , visual_eye.get_rect().h)
+        screen.blit(visual_eye, visual_eye_rec)
+        pygame.draw.rect(screen, "white", enter_button, 3)
+        pygame.draw.rect(screen, "white", username_button, 3, border_radius=10)
+        pygame.draw.rect(screen, "white", password_button, 3, border_radius=10)
+
+        if hide_password:
+            draw_text(len(password_txt) * "*", ButtonFont, (255, 255, 255), screen,
+                      password_button.x + password_button.w // 2,
+                      password_button.y + password_button.h // 2)
+        else:
+            draw_text(password_txt, ButtonFont, (255, 255, 255), screen, password_button.x + password_button.w // 2,
+                      password_button.y + password_button.h // 2)
 
         cursor = pygame.Rect((0, 0), (0, 0))
         if active_username:
@@ -227,6 +264,12 @@ def login_menu(conn):
             rect.center = (password_button.x + password_button.w // 2,
                            password_button.y + password_button.h // 2)
             cursor = pygame.Rect(rect.topright, (3, rect.height))
+            if hide_password:
+                txt = ButtonFont.render(len(password_txt) * "*", True, (255, 255, 255))
+                rect = txt.get_rect()
+                rect.center = (password_button.x + password_button.w // 2,
+                               password_button.y + password_button.h // 2)
+                cursor = pygame.Rect(rect.topright, (3, rect.height))
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -245,9 +288,11 @@ def login_menu(conn):
                         loggedin_menu(conn, ast.literal_eval(msg))
                     else:
                         print(msg)
-                if not username_button.collidepoint(event.pos):
+                elif visual_eye_rec.collidepoint(event.pos):
+                    hide_password = not hide_password
+                if not username_button.collidepoint(event.pos) and not visual_eye_rec.collidepoint(event.pos):
                     active_username = False
-                if not password_button.collidepoint(event.pos):
+                if not password_button.collidepoint(event.pos) and not visual_eye_rec.collidepoint(event.pos):
                     active_password = False
 
             if event.type == pygame.KEYDOWN:
@@ -278,29 +323,50 @@ def register_menu(conn):
     active_password = False
     username_txt = ""
     password_txt = ""
+    hide_password = True
+    visual_eye.set_alpha(128)
+    username_button = pygame.Rect(265, 240, 270, 60)
 
+    password_button = pygame.Rect(username_button.x, username_button.y + 90, username_button.w,
+                                  username_button.h)
+
+    enter_button = pygame.Rect(username_button.x + 70, password_button.y + 90, username_button.w - 140,
+                               username_button.h)
     while True:
         bj_screen()
-
         draw_text("register", ButtonFont, (255, 255, 255), screen, display_width // 2, 232 - 40)
 
-        username_button = pygame.Rect(265, 240, 270, 60)
-        pygame.draw.rect(screen, "white", username_button, 3, border_radius=10)
-
-        password_button = pygame.Rect(username_button.x, username_button.y + 90, username_button.w,
-                                      username_button.h)
-        pygame.draw.rect(screen, "white", password_button, 3, border_radius=10)
-
-        enter_button = pygame.Rect(username_button.x + 70, password_button.y + 90, username_button.w - 140,
-                                   username_button.h)
-        pygame.draw.rect(screen, "white", enter_button, 3)
+        if len(password_txt) == 0:
+            text_surf = HelveticaFont.render('password', True, "black")
+            text_surf.set_alpha(111)
+            text_rect = text_surf.get_rect(center=(password_button.x + password_button.w/2, password_button.y
+                                                   + password_button.h/2))
+            screen.blit(text_surf, text_rect)
+        if len(username_txt) == 0:
+            text_surf = HelveticaFont.render('username', True, "black")
+            text_surf.set_alpha(111)
+            text_rect = text_surf.get_rect(center=(username_button.x + username_button.w/2, username_button.y
+                                                   + username_button.h/2))
+            screen.blit(text_surf, text_rect)
         draw_text("enter", ButtonFont, (255, 255, 255), screen, (enter_button.x + enter_button.w // 2),
                   (enter_button.y + enter_button.h // 2))
 
         draw_text(username_txt, ButtonFont, (255, 255, 255), screen, username_button.x + username_button.w // 2,
                   username_button.y + username_button.h // 2)
-        draw_text(password_txt, ButtonFont, (255, 255, 255), screen, password_button.x + password_button.w // 2,
-                  password_button.y + password_button.h // 2)
+        visual_eye_rec = pygame.Rect(password_button.x + password_button.w, password_button.y+4, visual_eye.get_rect().w
+                                     , visual_eye.get_rect().h)
+        screen.blit(visual_eye, visual_eye_rec)
+        pygame.draw.rect(screen, "white", enter_button, 3)
+        pygame.draw.rect(screen, "white", username_button, 3, border_radius=10)
+        pygame.draw.rect(screen, "white", password_button, 3, border_radius=10)
+
+        if hide_password:
+            draw_text(len(password_txt) * "*", ButtonFont, (255, 255, 255), screen,
+                      password_button.x + password_button.w // 2,
+                      password_button.y + password_button.h // 2)
+        else:
+            draw_text(password_txt, ButtonFont, (255, 255, 255), screen, password_button.x + password_button.w // 2,
+                      password_button.y + password_button.h // 2)
 
         cursor = pygame.Rect((0, 0), (0, 0))
         if active_username:
@@ -315,6 +381,12 @@ def register_menu(conn):
             rect.center = (password_button.x + password_button.w // 2,
                            password_button.y + password_button.h // 2)
             cursor = pygame.Rect(rect.topright, (3, rect.height))
+            if hide_password:
+                txt = ButtonFont.render(len(password_txt) * "*", True, (255, 255, 255))
+                rect = txt.get_rect()
+                rect.center = (password_button.x + password_button.w // 2,
+                               password_button.y + password_button.h // 2)
+                cursor = pygame.Rect(rect.topright, (3, rect.height))
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -333,9 +405,11 @@ def register_menu(conn):
                         loggedin_menu(conn, ast.literal_eval(msg))
                     else:
                         print(msg)
-                if not username_button.collidepoint(event.pos):
+                elif visual_eye_rec.collidepoint(event.pos):
+                    hide_password = not hide_password
+                if not username_button.collidepoint(event.pos) and not visual_eye_rec.collidepoint(event.pos):
                     active_username = False
-                if not password_button.collidepoint(event.pos):
+                if not password_button.collidepoint(event.pos) and not visual_eye_rec.collidepoint(event.pos):
                     active_password = False
 
             if event.type == pygame.KEYDOWN:
@@ -496,7 +570,7 @@ def play_menu(conn, user_info):
                     highlighted_podium_true = False
                     leaderboard_menu(conn, user_info)
                 if table_button1.collidepoint(event.pos):
-                    table1(conn, user_info)
+                    user_info = table1(conn, user_info)
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
@@ -552,10 +626,13 @@ def profile_menu(conn, user_info):
         draw_text("save", HelveticaFont, "black", screen, save_pfp_button.x + save_pfp_button.w / 2,
                   save_pfp_button.y + save_pfp_button.h / 2)
 
-        left_arrow = pygame.Rect(20, 290, 20, 45)
-        pygame.draw.rect(screen, "white", left_arrow)
-        right_arrow = pygame.Rect(360, 290, 20, 45)
-        pygame.draw.rect(screen, "white", right_arrow)
+        left_arrow_rect = pygame.Rect(0, 275, 64, 64)
+        left_arrow_mask = pygame.mask.from_surface(left_arrow)
+        screen.blit(left_arrow, left_arrow_rect)
+
+        right_arrow_rect = pygame.Rect(340, 275, 64, 64)
+        right_arrow_mask = pygame.mask.from_surface(right_arrow)
+        screen.blit(right_arrow, right_arrow_rect)
 
         draw_text_Left("username:", HelveticaFont, (255, 255, 255), screen, display_width // 2, 330 // 2)
         Line1 = pygame.Rect(display_width // 2, 490 // 2, 340, 2)
@@ -614,12 +691,16 @@ def profile_menu(conn, user_info):
                                                              pfp_pictures.index(big_pfp)))
                         if cmd == PROTOCOL_SERVER['change_pfp_ok']:
                             user_info = ast.literal_eval(msg)
-                elif right_arrow.collidepoint(event.pos):
+                elif right_arrow_rect.collidepoint(event.pos) and \
+                        right_arrow_mask.get_at(
+                            (event.pos[0] - right_arrow_rect.x, event.pos[1] - right_arrow_rect.y)):
                     if pfp_pictures.index(big_pfp) == 3:
                         big_pfp = pfp_pictures[0]
                     else:
                         big_pfp = pfp_pictures[pfp_pictures.index(big_pfp) + 1]
-                elif left_arrow.collidepoint(event.pos):
+                elif left_arrow_rect.collidepoint(event.pos) and \
+                        left_arrow_mask.get_at(
+                            (event.pos[0] - left_arrow_rect.x, event.pos[1] - left_arrow_rect.y)):
                     big_pfp = pfp_pictures[pfp_pictures.index(big_pfp) - 1]
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -747,47 +828,47 @@ def receive_information_from_server(conn):
 
 def table1(conn, user_info):
     stop_event.clear()
-    server_thread = threading.Thread(target=receive_information_from_server, args=(conn, ))
+    server_thread = threading.Thread(target=receive_information_from_server, args=(conn,))
     server_thread.start()
     build_and_send_message(conn, PROTOCOL_CLIENT["join_table"], "0")
 
     game_state = {
-    "seats": [
-        {
-            "name": None,
-            "profile_picture": None,
+        "seats": [
+            {
+                "name": None,
+                "profile_picture": None,
+                "cards": [],
+                "bet": None,
+                "reaction": None,
+                "result": [None, None],
+                "wlp": None
+            },
+            {
+                "name": None,
+                "profile_picture": None,
+                "cards": [],
+                "bet": None,
+                "reaction": None,
+                "result": [None, None],
+                "wlp": None
+            },
+            {
+                "name": None,
+                "profile_picture": None,
+                "cards": [],
+                "bet": None,
+                "reaction": None,
+                "result": [None, None],
+                "wlp": None
+            }
+        ],
+        "dealer": {
             "cards": [],
-            "bet": None,
-            "reaction": None,
-            "result": [None, None],
-            "wlp": None
+            "result": [None, None]
         },
-        {
-            "name": None,
-            "profile_picture": None,
-            "cards": [],
-            "bet": None,
-            "reaction": None,
-            "result": [None, None],
-            "wlp": None
-        },
-        {
-            "name": None,
-            "profile_picture": None,
-            "cards": [],
-            "bet": None,
-            "reaction": None,
-            "result": [None, None],
-            "wlp": None
-        }
-    ],
-    "dealer": {
-        "cards": [],
-        "result": [None, None]
-    },
-    "is_game_over": True,
-    "timer": [None, None, None]
-}
+        "is_game_over": True,
+        "timer": [None, None, None]
+    }
 
     offset_x = None
     scroll_value = 0
@@ -815,7 +896,9 @@ def table1(conn, user_info):
         except queue.Empty:
             pass
 
-        bj_screen()
+        screen.blit(overlay, (0, 0))
+        draw_text("BlackJack", MainScreenFont, (255, 255, 255), screen, display_width // 2, 120 // 2)
+        draw_text(f"chips: {user_info[2]}", HelveticaFont, (255, 255, 255), screen, display_width // 2, 215 // 2)
         screen.blit(bj_table, (-10, 0))
 
         hit_button = circle_surface("black", 50, 70, 180)  # (center coordinates), radius
@@ -831,7 +914,7 @@ def table1(conn, user_info):
         profile_picture = pygame.transform.scale(pfp_pictures[user_info[4]], (70, 70))
 
         bet_rect = pygame.Rect(bet_amount_button.x + bet_amount_button.w + 1, bet_amount_button.y + 36, 60, 30)
-        undo_rect = pygame.Rect(bet_rect.x, bet_rect.y - bet_rect.h-1, 60, 30)
+        undo_rect = pygame.Rect(bet_rect.x, bet_rect.y - bet_rect.h - 1, 60, 30)
 
         mone = None
         for i in range(len(game_state["seats"])):
@@ -866,10 +949,14 @@ def table1(conn, user_info):
             screen.blit(pygame.transform.scale(pfp_pictures[int(game_state["seats"][0]["profile_picture"])],
                                                (70, 70)), profile_rect)
             draw_text(game_state["seats"][0]["name"], HelveticaFont, "white", screen, 200, 435)
+            if game_state["seats"][0]["name"] == user_info[1]:
+                draw_text(game_state["seats"][0]["name"], HelveticaFont, "red", screen, 200, 435)
             if game_state["seats"][0]["bet"] is not None:
                 draw_text(game_state["seats"][0]["bet"], HelveticaFont, "white", screen, 200, 375)
             if game_state["seats"][0]["result"] is not None:
-                draw_text(game_state["seats"][0]["result"][0], HelveticaFont, "black", screen, 200, 325)
+                for i in range(len(game_state["seats"][0]["cards"])):
+                    screen.blit(cards[game_state["seats"][0]["cards"][i]], (180 + 15 * i, 290))
+                draw_text(game_state["seats"][0]["result"][0], HelveticaFont, "black", screen, 200, 280)
                 if game_state["seats"][0]["result"][1] is not None:
                     draw_text(game_state["seats"][0]["result"][1], HelveticaFont, "black", screen, 200, 300)
             if game_state["seats"][0]["wlp"] is not None:
@@ -880,10 +967,14 @@ def table1(conn, user_info):
             screen.blit(pygame.transform.scale(pfp_pictures[int(game_state["seats"][1]["profile_picture"])],
                                                (70, 70)), profile_rect)
             draw_text(game_state["seats"][1]["name"], HelveticaFont, "white", screen, 400, 510)
+            if game_state["seats"][1]["name"] == user_info[1]:
+                draw_text(game_state["seats"][1]["name"], HelveticaFont, "red", screen, 400, 510)
             if game_state["seats"][1]["bet"] is not None:
                 draw_text(game_state["seats"][1]["bet"], HelveticaFont, "white", screen, 400, 450)
             if game_state["seats"][1]["result"] is not None:
-                draw_text(game_state["seats"][1]["result"][0], HelveticaFont, "black", screen, 400, 400)
+                for i in range(len(game_state["seats"][1]["cards"])):
+                    screen.blit(cards[game_state["seats"][1]["cards"][i]], (350 + 15 * i, 360))
+                draw_text(game_state["seats"][1]["result"][0], HelveticaFont, "black", screen, 400, 350)
                 if game_state["seats"][1]["result"][1] is not None:
                     draw_text(game_state["seats"][1]["result"][1], HelveticaFont, "black", screen, 400, 375)
             if game_state["seats"][1]["wlp"] is not None:
@@ -894,17 +985,24 @@ def table1(conn, user_info):
             screen.blit(pygame.transform.scale(pfp_pictures[int(game_state["seats"][2]["profile_picture"])],
                                                (70, 70)), profile_rect)
             draw_text(game_state["seats"][2]["name"], HelveticaFont, "white", screen, 595, 435)
+            if game_state["seats"][2]["name"] == user_info[1]:
+                draw_text(game_state["seats"][2]["name"], HelveticaFont, "red", screen, 595, 435)
             if game_state["seats"][2]["bet"] is not None:
                 draw_text(game_state["seats"][2]["bet"], HelveticaFont, "white", screen, 595, 375)
             if game_state["seats"][2]["result"] is not None:
-                draw_text(game_state["seats"][2]["result"][0], HelveticaFont, "black", screen, 595, 325)
+                for i in range(len(game_state["seats"][2]["cards"])):
+                    screen.blit(cards[game_state["seats"][2]["cards"][i]], (530 + 15 * i, 290))
+                draw_text(game_state["seats"][2]["result"][0], HelveticaFont, "black", screen, 595, 280)
                 if game_state["seats"][2]["result"][1] is not None:
                     draw_text(game_state["seats"][2]["result"][1], HelveticaFont, "black", screen, 595, 300)
             if game_state["seats"][2]["wlp"] is not None:
                 draw_text(game_state["seats"][2]["wlp"], ButtonFont, "black", screen, 595, 400)
 
         if game_state["dealer"]["result"][0] is not None:
-            draw_text(game_state["dealer"]["result"][0], HelveticaFont, "black", screen, 400, 300)
+            for i in range(len(game_state["dealer"]["cards"])):
+                screen.blit(cards[game_state["dealer"]["cards"][i]], (360 + 15 * i, 150))
+            draw_text(game_state["dealer"]["result"][0], HelveticaFont, "black", screen, 400, 240)
+
         if game_state["timer"][0] is not None and bone:
             start_time, close_time, server_current_time = game_state["timer"]
             client_current_time = time.time()
@@ -925,80 +1023,92 @@ def table1(conn, user_info):
                 print("new ", game_state)
             total_width = 300
             bar_width = int(total_width * remaining_time / (adjusted_close_time - adjusted_start_time))
-            pygame.draw.rect(screen, (0, 0, 0), (250, 150, total_width, 20))
-            pygame.draw.rect(screen, (255, 0, 0), (250, 150, bar_width, 20))
+            pygame.draw.rect(screen, (0, 0, 0), (250, 122, total_width, 20))
+            pygame.draw.rect(screen, (255, 0, 0), (250, 122, bar_width, 20))
             font = pygame.font.SysFont(None, 25)
             text = font.render("Time Remaining To React: {:.1f}s".format(remaining_time), True, "white")
             if game_state["is_game_over"]:
                 text = font.render("Time Remaining To Bet: {:.1f}s".format(remaining_time), True, "white")
             # elif len(game_state["dealer"]["cards"]) > 1:
             #     text = font.render("Finishing Game...".format(remaining_time), True, "white")
-            text_rec = text.get_rect(center=(250 + total_width/2, 150 + 20/2))
+            text_rec = text.get_rect(center=(250 + total_width / 2, 122 + 20 / 2))
             screen.blit(text, text_rec)
 
         if taken_seat is not None:
-            if len(game_state["seats"][taken_seat]["cards"]) > 0 and game_state["seats"][taken_seat]["reaction"] is None and game_state["seats"][taken_seat]["result"][1] is None and len(game_state["dealer"]["cards"]) == 1 and remaining_time != 0:
-                hit_button = circle_surface("green", 50, 70, 180)  # (center coordinates), radius
+            if game_state["is_game_over"] is False:
+                if len(game_state["seats"][taken_seat]["cards"]) > 0 and game_state["seats"][taken_seat][
+                    "reaction"] is None and game_state["seats"][taken_seat]["result"][1] is None and len(
+                    game_state["dealer"]["cards"]) == 1 and remaining_time != 0:
+                    hit_button = circle_surface("green", 50, 70, 180)  # (center coordinates), radius
 
-            screen.blit(hit_button, (0, 0))
-            draw_text("hit", HelveticaFont, "white", screen, 70, 180)
+                screen.blit(hit_button, (0, 0))
+                draw_text("hit", HelveticaFont, "white", screen, 70, 180)
 
-            if len(game_state["seats"][taken_seat]["cards"]) > 0 and game_state["seats"][taken_seat]["reaction"] is None and game_state["seats"][taken_seat]["result"][1] is None and len(game_state["dealer"]["cards"]) == 1 and remaining_time != 0:
-                stand_button = circle_surface("red", 50, 70, 180 + 120)  # (center coordinates), radius
-            screen.blit(stand_button, (0, 0))
-            draw_text("stand", HelveticaFont, "white", screen, 70, 180 + 120)
+                if len(game_state["seats"][taken_seat]["cards"]) > 0 and game_state["seats"][taken_seat][
+                    "reaction"] is None and game_state["seats"][taken_seat]["result"][1] is None and len(
+                    game_state["dealer"]["cards"]) == 1 and remaining_time != 0:
+                    stand_button = circle_surface("red", 50, 70, 180 + 120)  # (center coordinates), radius
+                screen.blit(stand_button, (0, 0))
+                draw_text("stand", HelveticaFont, "white", screen, 70, 180 + 120)
 
-            if len(game_state["seats"][taken_seat]["cards"]) > 0 and user_info[2] >= value_bet*2 and game_state["seats"][taken_seat]["reaction"] is None and game_state["seats"][taken_seat]["result"][1] is None and len(game_state["seats"][taken_seat]["cards"]) == 2 and len(game_state["dealer"]["cards"]) == 1 and remaining_time != 0:
-                double_down_button = circle_surface("purple", 50, 70, 180 + 120 + 120)  # (center coordinates), radius
+                if len(game_state["seats"][taken_seat]["cards"]) > 0 and user_info[2] >= value_bet * 2 and \
+                        game_state["seats"][taken_seat]["reaction"] is None and \
+                        game_state["seats"][taken_seat]["result"][1] is None and len(
+                    game_state["seats"][taken_seat]["cards"]) == 2 and len(
+                    game_state["dealer"]["cards"]) == 1 and remaining_time != 0:
+                    double_down_button = circle_surface("purple", 50, 70,
+                                                        180 + 120 + 120)  # (center coordinates), radius
 
-            screen.blit(double_down_button, (0, 0))
-            draw_text("double", HelveticaFont, "white", screen, 70, 180 + 120 + 120 - 7)
-            draw_text("down", HelveticaFont, "white", screen, 70, 180 + 120 + 120 + 7)
+                screen.blit(double_down_button, (0, 0))
+                draw_text("double", HelveticaFont, "white", screen, 70, 180 + 120 + 120 - 7)
+                draw_text("down", HelveticaFont, "white", screen, 70, 180 + 120 + 120 + 7)
+            else:
+                pygame.draw.rect(screen, "black", bet_amount_button)
+                draw_text("bet amount", HelveticaFont, "white", screen, bet_amount_button.x + bet_amount_button.w / 2,
+                          bet_amount_button.y + 10)
 
-            pygame.draw.rect(screen, "black", bet_amount_button)
-            draw_text("bet amount", HelveticaFont, "white", screen, bet_amount_button.x + bet_amount_button.w / 2,
-                      bet_amount_button.y + 10)
+                ##########
+                MAX_VALUE = user_info[2]
 
-            ##########
-            MAX_VALUE = user_info[2]
+                pygame.draw.rect(screen, 'GRAY', scroll_bar_rect)
+                pygame.draw.rect(screen, 'BLACK', scroll_bar_rect, 2)
 
-            pygame.draw.rect(screen, 'GRAY', scroll_bar_rect)
-            pygame.draw.rect(screen, 'BLACK', scroll_bar_rect, 2)
+                # Draw the scroll handle
+                pygame.draw.rect(screen, 'GRAY', scroll_handle_rect)
+                pygame.draw.rect(screen, 'BLACK', scroll_handle_rect, 2)
 
-            # Draw the scroll handle
-            pygame.draw.rect(screen, 'GRAY', scroll_handle_rect)
-            pygame.draw.rect(screen, 'BLACK', scroll_handle_rect, 2)
+                # Draw the label for the scroll value
+                label = ButtonFont.render(str(scroll_value), True, 'white')
+                rect = label.get_rect(
+                    center=(bet_amount_button.x + bet_amount_button.w / 2, scroll_bar_rect.y + scroll_bar_rect.h + 15))
+                screen.blit(label, rect)
 
-            # Draw the label for the scroll value
-            label = ButtonFont.render(str(scroll_value), True, 'white')
-            rect = label.get_rect(
-                center=(bet_amount_button.x + bet_amount_button.w / 2, scroll_bar_rect.y + scroll_bar_rect.h + 15))
-            screen.blit(label, rect)
+                # Draw the left button
+                pygame.draw.rect(screen, 'GRAY', left_button_rect)
+                pygame.draw.rect(screen, 'BLACK', left_button_rect, 2)
+                left_button_label = ButtonFont.render("<", True, 'BLACK')
+                left_button_label_rect = left_button_label.get_rect(center=left_button_rect.center)
+                screen.blit(left_button_label, left_button_label_rect)
 
-            # Draw the left button
-            pygame.draw.rect(screen, 'GRAY', left_button_rect)
-            pygame.draw.rect(screen, 'BLACK', left_button_rect, 2)
-            left_button_label = ButtonFont.render("<", True, 'BLACK')
-            left_button_label_rect = left_button_label.get_rect(center=left_button_rect.center)
-            screen.blit(left_button_label, left_button_label_rect)
+                # Draw the right button
+                pygame.draw.rect(screen, 'GRAY', right_button_rect)
+                pygame.draw.rect(screen, 'BLACK', right_button_rect, 2)
+                right_button_label = ButtonFont.render(">", True, 'BLACK')
+                right_button_label_rect = right_button_label.get_rect(center=right_button_rect.center)
+                screen.blit(right_button_label, right_button_label_rect)
 
-            # Draw the right button
-            pygame.draw.rect(screen, 'GRAY', right_button_rect)
-            pygame.draw.rect(screen, 'BLACK', right_button_rect, 2)
-            right_button_label = ButtonFont.render(">", True, 'BLACK')
-            right_button_label_rect = right_button_label.get_rect(center=right_button_rect.center)
-            screen.blit(right_button_label, right_button_label_rect)
+                pygame.draw.rect(screen, 'black', bet_rect)
+                pygame.draw.rect(screen, 'black', undo_rect)
 
-            cursor = pygame.Rect((rect.bottomleft[0], rect.bottomleft[1] - 5), (rect.width, 2))
-
-            pygame.draw.rect(screen, 'black', bet_rect)
-            pygame.draw.rect(screen, 'black', undo_rect)
-            if scroll_value != 0 and game_state["is_game_over"] is True and game_state["seats"][taken_seat]["bet"] is None:
-                pygame.draw.rect(screen, 'green', bet_rect)
-            if game_state["seats"][taken_seat]["bet"] is not None and game_state["is_game_over"] is True:
-                pygame.draw.rect(screen, 'red', undo_rect)
-            draw_text("bet", HelveticaFont, "white", screen, bet_rect.x + bet_rect.w/2, bet_rect.y + bet_rect.h/2)
-            draw_text("undo", HelveticaFont, "white", screen, undo_rect.x + undo_rect.w/2, undo_rect.y + undo_rect.h/2)
+                if scroll_value != 0 and game_state["is_game_over"] is True and game_state["seats"][taken_seat][
+                    "bet"] is None:
+                    pygame.draw.rect(screen, 'green', bet_rect)
+                if game_state["seats"][taken_seat]["bet"] is not None and game_state["is_game_over"] is True:
+                    pygame.draw.rect(screen, 'red', undo_rect)
+                draw_text("bet", HelveticaFont, "white", screen, bet_rect.x + bet_rect.w / 2,
+                          bet_rect.y + bet_rect.h / 2)
+                draw_text("undo", HelveticaFont, "white", screen, undo_rect.x + undo_rect.w / 2,
+                          undo_rect.y + undo_rect.h / 2)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -1023,41 +1133,54 @@ def table1(conn, user_info):
                 if table_seat1_mask.get_rect().collidepoint(event.pos) and \
                         table_seat1_mask.get_at(
                             (event.pos[0] - table_seat1_mask.get_rect().x,
-                             event.pos[1] - table_seat1_mask.get_rect().y)) and taken_seat is None and game_state["seats"][0]["name"] is None\
+                             event.pos[1] - table_seat1_mask.get_rect().y)) and taken_seat is None and \
+                        game_state["seats"][0]["name"] is None \
                         and game_state["is_game_over"]:
                     build_and_send_message(conn, PROTOCOL_CLIENT["join_seat"],
-                                                     '0' + DATA_DELIMITER + '0')
+                                           '0' + DATA_DELIMITER + '0')
                 elif table_seat2.get_rect().collidepoint(event.pos) and \
                         table_seat2_mask.get_at(
                             (event.pos[0] - table_seat2_mask.get_rect().x,
-                             event.pos[1] - table_seat2_mask.get_rect().y)) and taken_seat is None and game_state["seats"][1]["name"] is None\
+                             event.pos[1] - table_seat2_mask.get_rect().y)) and taken_seat is None and \
+                        game_state["seats"][1]["name"] is None \
                         and game_state["is_game_over"]:
                     build_and_send_message(conn, PROTOCOL_CLIENT["join_seat"],
-                                                     '0' + DATA_DELIMITER + '1')
+                                           '0' + DATA_DELIMITER + '1')
                 elif table_seat3_mask.get_rect().collidepoint(event.pos) and \
                         table_seat3_mask.get_at(
                             (event.pos[0] - table_seat3_mask.get_rect().x,
-                             event.pos[1] - table_seat3_mask.get_rect().y)) and taken_seat is None and game_state["seats"][2]["name"] is None\
+                             event.pos[1] - table_seat3_mask.get_rect().y)) and taken_seat is None and \
+                        game_state["seats"][2]["name"] is None \
                         and game_state["is_game_over"]:
                     build_and_send_message(conn, PROTOCOL_CLIENT["join_seat"],
-                                                     '0' + DATA_DELIMITER + '2')
+                                           '0' + DATA_DELIMITER + '2')
                 if taken_seat is not None:
                     if hit_mask.get_rect().collidepoint(event.pos) and \
                             hit_mask.get_at(
-                                (event.pos[0] - hit_mask.get_rect().x, event.pos[1] - hit_mask.get_rect().y))\
-                            and not game_state["is_game_over"] and remaining_time != 0 and game_state["seats"][taken_seat]["reaction"] is None and game_state["seats"][taken_seat]["result"][1] is None and len(game_state["dealer"]["cards"]) == 1 and remaining_time != 0:
+                                (event.pos[0] - hit_mask.get_rect().x, event.pos[1] - hit_mask.get_rect().y)) \
+                            and not game_state["is_game_over"] and remaining_time != 0 and \
+                            game_state["seats"][taken_seat]["reaction"] is None and \
+                            game_state["seats"][taken_seat]["result"][1] is None and len(
+                        game_state["dealer"]["cards"]) == 1 and remaining_time != 0:
                         build_and_send_message(conn, PROTOCOL_CLIENT["reaction"],
                                                '0' + DATA_DELIMITER + str(taken_seat) + DATA_DELIMITER + "hit")
                     elif stand_mask.get_rect().collidepoint(event.pos) and \
                             stand_mask.get_at(
-                                (event.pos[0] - stand_mask.get_rect().x, event.pos[1] - stand_mask.get_rect().y))\
-                            and not game_state["is_game_over"] and remaining_time != 0 and game_state["seats"][taken_seat]["reaction"] is None and game_state["seats"][taken_seat]["result"][1] is None and len(game_state["dealer"]["cards"]) == 1and remaining_time != 0:
+                                (event.pos[0] - stand_mask.get_rect().x, event.pos[1] - stand_mask.get_rect().y)) \
+                            and not game_state["is_game_over"] and remaining_time != 0 and \
+                            game_state["seats"][taken_seat]["reaction"] is None and \
+                            game_state["seats"][taken_seat]["result"][1] is None and len(
+                        game_state["dealer"]["cards"]) == 1 and remaining_time != 0:
                         build_and_send_message(conn, PROTOCOL_CLIENT["reaction"],
                                                '0' + DATA_DELIMITER + str(taken_seat) + DATA_DELIMITER + "stand")
                     elif double_down_mask.get_rect().collidepoint(event.pos) and \
                             double_down_mask.get_at((event.pos[0] - double_down_mask.get_rect().x,
-                                                     event.pos[1] - double_down_mask.get_rect().y))\
-                            and not game_state["is_game_over"] and remaining_time != 0 and user_info[2] >= scroll_value*2 and game_state["seats"][taken_seat]["reaction"] is None and game_state["seats"][taken_seat]["result"][1] is None and len(game_state["seats"][taken_seat]["cards"]) == 2 and len(game_state["dealer"]["cards"]) == 1 and remaining_time != 0:
+                                                     event.pos[1] - double_down_mask.get_rect().y)) \
+                            and not game_state["is_game_over"] and remaining_time != 0 and user_info[
+                        2] >= scroll_value * 2 and game_state["seats"][taken_seat]["reaction"] is None and \
+                            game_state["seats"][taken_seat]["result"][1] is None and len(
+                        game_state["seats"][taken_seat]["cards"]) == 2 and len(
+                        game_state["dealer"]["cards"]) == 1 and remaining_time != 0:
                         build_and_send_message(conn, PROTOCOL_CLIENT["reaction"],
                                                '0' + DATA_DELIMITER + str(taken_seat) + DATA_DELIMITER + "double_down")
                     elif scroll_bar_rect.collidepoint(event.pos) and game_state["seats"][taken_seat]["bet"] is None:
@@ -1082,14 +1205,14 @@ def table1(conn, user_info):
                             scroll_bar_rect.left + scroll_value / MAX_VALUE * (
                                     scroll_bar_rect.width - scroll_handle_rect.width))
                         offset_x = None
-                    elif bet_rect.collidepoint(event.pos) and scroll_value != 0 and game_state["is_game_over"] is True\
+                    elif bet_rect.collidepoint(event.pos) and scroll_value != 0 and game_state["is_game_over"] is True \
                             and game_state["seats"][taken_seat]["bet"] is None:
                         value_bet = scroll_value
                         scroll_value = 0
                         scroll_handle_rect.x = scroll_bar_rect.x
                         build_and_send_message(conn, PROTOCOL_CLIENT["change_bet"],
                                                '0' + DATA_DELIMITER + str(taken_seat) + DATA_DELIMITER + str(value_bet))
-                    elif undo_rect.collidepoint(event.pos) and game_state["seats"][taken_seat]["bet"] is not None and\
+                    elif undo_rect.collidepoint(event.pos) and game_state["seats"][taken_seat]["bet"] is not None and \
                             game_state["is_game_over"] is True:
                         build_and_send_message(conn, PROTOCOL_CLIENT["change_bet"],
                                                '0' + DATA_DELIMITER + str(taken_seat) + DATA_DELIMITER + str(None))
