@@ -186,22 +186,21 @@ def handle_leaderboard_message(conn):
 
 
 def handle_join_seat(conn, data, address):
-    chosen_table, chosen_seat = data.split("#")[0], data.split("#")[1]
+    pfp, username, chosen_table, chosen_seat = data.split("#")[0], data.split("#")[1], data.split("#")[2], data.split("#")[3]
     if tables[int(chosen_table)]["seats"][int(chosen_seat)]["name"] is not None:
         return build_and_send_message(conn, PROTOCOL_SERVER['error_msg'], "")
-    for user in logged_users:
-        if user == address:
-            user_info = db.get_user_info(logged_users[user])
-            tables[int(chosen_table)]["seats"][int(chosen_seat)]["name"] = user_info[1]
-            tables[int(chosen_table)]["seats"][int(chosen_seat)]["profile_picture"] = user_info[4]
+    tables[int(chosen_table)]["seats"][int(chosen_seat)]["name"] = username
+    tables[int(chosen_table)]["seats"][int(chosen_seat)]["profile_picture"] = pfp
+    db.update_in_table(username, chosen_table)
     for player in all_table_players[int(chosen_table)].values():
-        build_and_send_message(player, PROTOCOL_SERVER['leaderboard_ok'], str(tables[int(chosen_table)]))
+        build_and_send_message(player, PROTOCOL_SERVER['get_info_table'], str(tables[int(chosen_table)]))
 
 
 def handle_leave_seat(conn, data, address):
     chosen_table, chosen_seat = data.split("#")[0], data.split("#")[1]
     if tables[int(chosen_table)]["seats"][int(chosen_seat)]["name"] is None:
         return build_and_send_message(conn, PROTOCOL_SERVER['error_msg'], "")
+    db.update_in_table(tables[int(chosen_table)]["seats"][int(chosen_seat)]["name"], "n")
     tables[int(chosen_table)]["seats"][int(chosen_seat)]["name"] = None
     tables[int(chosen_table)]["seats"][int(chosen_seat)]["profile_picture"] = None
     tables[int(chosen_table)]["seats"][int(chosen_seat)]["bet"] = None
@@ -209,15 +208,18 @@ def handle_leave_seat(conn, data, address):
 
 
 def handle_join_table(conn, data, address):
-    all_table_players[int(data)][logged_users[address]] = conn
-    tables[int(data)]["timer"][2] = time.time()
-    build_and_send_message(conn, PROTOCOL_SERVER['leaderboard_ok'], str(tables[int(data)]))
-    tables[int(data)]["timer"][2] = None
+    username, chosen_table = data.split("#")[0], data.split("#")[1]
+    TableStatus = db.get_in_table(username)
+    if TableStatus != chosen_table and TableStatus != "n":
+        return build_and_send_message(conn, PROTOCOL_SERVER['error_msg'], "")
+    all_table_players[int(chosen_table)][logged_users[address]] = conn
+    tables[int(chosen_table)]["timer"][2] = time.time()
+    build_and_send_message(conn, PROTOCOL_SERVER['get_info_table'], str(tables[int(chosen_table)]))
 
 
 def handle_leave_table(conn, data, address):
     del all_table_players[int(data)][logged_users[address]]
-    build_and_send_message(conn, PROTOCOL_SERVER['leave_table_ok'], "")
+    build_and_send_message(conn, PROTOCOL_SERVER['get_info_table'], "")
 
 
 def handle_leave_game(conn, data, address):
@@ -250,24 +252,30 @@ def check_starting_game(chosen_table):
         tables[int(chosen_table)]["timer"][2] = time.time()
         game_thread.start()
     elif not running:
-        print("closing..")
         game_thread.join
-        print("closed")
         tables[int(chosen_table)]["timer"][0] = None
         tables[int(chosen_table)]["timer"][1] = None
         tables[int(chosen_table)]["timer"][2] = None
     for player in all_table_players[int(chosen_table)].values():
-        build_and_send_message(player, PROTOCOL_SERVER['leaderboard_ok'], str(tables[int(chosen_table)]))
+        build_and_send_message(player, PROTOCOL_SERVER['get_info_table'], str(tables[int(chosen_table)]))
 
 
 def handle_game_blackjack(chosen_table):
+    time1 = tables[int(chosen_table)]["timer"][1]
+    if time1 is None:
+        print("closing thread")
+        return
     time.sleep(tables[int(chosen_table)]["timer"][1] - time.time() + 0.1)
+    if tables[int(chosen_table)]["timer"][1] != time1 or tables[int(chosen_table)]["timer"][1] is None or \
+            not tables[int(chosen_table)]["is_game_over"]:
+        print("closing thread")
+        return
     tables[int(chosen_table)]["timer"][0] = time.time()
     tables[int(chosen_table)]["timer"][1] = time.time() + 13
     tables[int(chosen_table)]["timer"][2] = time.time()
     tables[int(chosen_table)]["is_game_over"] = False
     for player in all_table_players[int(chosen_table)].values():
-        build_and_send_message(player, PROTOCOL_SERVER['leaderboard_ok'], str(tables[int(chosen_table)]))
+        build_and_send_message(player, PROTOCOL_SERVER['get_info_table'], str(tables[int(chosen_table)]))
     tables[int(chosen_table)]["dealer"]["cards"] = [random.choice(card_names)]
     calculate_card_result(tables[int(chosen_table)]["dealer"])
     for player in tables[int(chosen_table)]["seats"]:
@@ -278,7 +286,7 @@ def handle_game_blackjack(chosen_table):
             player["cards"] = [random.choice(card_names), random.choice(card_names)]
             calculate_card_result(player)
     for player in all_table_players[int(chosen_table)].values():
-        build_and_send_message(player, PROTOCOL_SERVER['leaderboard_ok'], str(tables[int(chosen_table)]))
+        build_and_send_message(player, PROTOCOL_SERVER['get_info_table'], str(tables[int(chosen_table)]))
     time.sleep(tables[int(chosen_table)]["timer"][1] - time.time() + 0.1)
     while int(tables[int(chosen_table)]["dealer"]["result"][0]) < 17:
         tables[int(chosen_table)]["dealer"]["cards"].append(random.choice(card_names))
@@ -292,7 +300,8 @@ def handle_game_blackjack(chosen_table):
             elif int(tables[int(chosen_table)]["dealer"]["result"][0]) > 21 or int(player["result"][0]) > int(tables[int(chosen_table)]["dealer"]["result"][0]):
                 player["wlp"] = "win"
                 if int(player["result"][0]) == 21 and len(player["cards"]) == 2:
-                    db.update_user_score(player["name"], str(int(player["bet"])*3/2))
+
+                    db.update_user_score(player["name"], str(round(int(player["bet"])*3/2)))
                     db.update_win_loss_push(player["name"], player["wlp"])
                 else:
                     db.update_user_score(player["name"], player["bet"])
@@ -305,7 +314,7 @@ def handle_game_blackjack(chosen_table):
                 db.update_user_score(player["name"], "-" + player["bet"])
                 db.update_win_loss_push(player["name"], player["wlp"])
             if player["name"] in all_table_players[int(chosen_table)]:
-                build_and_send_message(all_table_players[int(chosen_table)][player["name"]], PROTOCOL_SERVER['leaderboard_ok'], str(db.get_user_info(player["name"])))
+                build_and_send_message(all_table_players[int(chosen_table)][player["name"]], PROTOCOL_SERVER['update_info'], str(db.get_user_info(player["name"])))
 
     # tables[int(chosen_table)]["timer"][0] = time.time()
     # tables[int(chosen_table)]["timer"][1] = time.time() + 7
@@ -314,7 +323,7 @@ def handle_game_blackjack(chosen_table):
     tables[int(chosen_table)]["timer"][1] = None
     tables[int(chosen_table)]["timer"][2] = None
     for player in all_table_players[int(chosen_table)].values():
-        build_and_send_message(player, PROTOCOL_SERVER['leaderboard_ok'],
+        build_and_send_message(player, PROTOCOL_SERVER['get_info_table'],
                                str(tables[int(chosen_table)]))
     # time.sleep(tables[int(chosen_table)]["timer"][1] - time.time())
     time.sleep(5 + 0.1)
@@ -326,15 +335,17 @@ def handle_game_blackjack(chosen_table):
     tables[int(chosen_table)]["dealer"]["result"] = [None, None]
     for player in tables[int(chosen_table)]["seats"]:
         if player["name"] not in all_table_players[int(chosen_table)]:
+            db.update_in_table(player["name"], "n")
             player["name"] = None
             player["profile_picture"] = None
+
         player["bet"] = None
         player["cards"] = []
         player["reaction"] = None
         player["result"] = [None, None]
         player["wlp"] = None
     for player in all_table_players[int(chosen_table)].values():
-        build_and_send_message(player, PROTOCOL_SERVER['leaderboard_ok'],
+        build_and_send_message(player, PROTOCOL_SERVER['get_info_table'],
                                str(tables[int(chosen_table)]))
 
 
@@ -411,28 +422,26 @@ def handle_client_message(client_socket, address):
         elif cmd == PROTOCOL_CLIENT["change_bet"]:
             handle_change_bet(msg)
         elif cmd == PROTOCOL_CLIENT["reaction"]:
-            handle_reaction(client_socket, msg, address)
+            handle_reaction(msg)
 
     client_socket.close()
 
 
-def handle_reaction(conn, data, address):
+def handle_reaction(data):
     chosen_table, chosen_seat, reaction = data.split("#")[0], data.split("#")[1], data.split("#")[2]
     print(f"F {chosen_table}-{chosen_seat}-{reaction} ")
-    # if reaction == "hit":
-    #     tables[int(chosen_table)]["seats"][int(chosen_seat)]["reaction"] = reaction
     if reaction == "hit":
         tables[int(chosen_table)]["seats"][int(chosen_seat)]["cards"].append(random.choice(card_names))
         calculate_card_result(tables[int(chosen_table)]["seats"][int(chosen_seat)])
         for player in all_table_players[int(chosen_table)].values():
-            build_and_send_message(player, PROTOCOL_SERVER['leaderboard_ok'],
+            build_and_send_message(player, PROTOCOL_SERVER['get_info_table'],
                                    str(tables[int(chosen_table)]))
         print("1")
     elif reaction == "stand":
         tables[int(chosen_table)]["seats"][int(chosen_seat)]["reaction"] = reaction
         tables[int(chosen_table)]["seats"][int(chosen_seat)]["result"][1] = "stand"
         for player in all_table_players[int(chosen_table)].values():
-            build_and_send_message(player, PROTOCOL_SERVER['leaderboard_ok'],
+            build_and_send_message(player, PROTOCOL_SERVER['get_info_table'],
                                    str(tables[int(chosen_table)]))
     elif reaction == "double_down":
         tables[int(chosen_table)]["seats"][int(chosen_seat)]["reaction"] = reaction
@@ -441,13 +450,16 @@ def handle_reaction(conn, data, address):
         calculate_card_result(tables[int(chosen_table)]["seats"][int(chosen_seat)])
 
         for player in all_table_players[int(chosen_table)].values():
-            build_and_send_message(player, PROTOCOL_SERVER['leaderboard_ok'],
+            build_and_send_message(player, PROTOCOL_SERVER['get_info_table'],
                                    str(tables[int(chosen_table)]))
 
 
 def handle_server_message():
     while True:
-        value = input(f"\033[95m ~~~~~~enter a command for the server~~~~~~ \033[0m \n")
+        try:
+            value = input(f"\033[95m ~~~~~~enter a command for the server~~~~~~ \033[0m \n")
+        except UnicodeDecodeError:
+            return
         if value == "users":
             print(f"\033[94m {str(logged_users)} \033[0m")
         elif value == "add":

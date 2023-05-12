@@ -20,7 +20,8 @@ class Database:
             pfp_pic INTEGER, 
             last_seen TIMESTAMP,
             is_online BOOL,
-            WinLossPush TEXT)""")
+            WinLossPush TEXT,
+            InTable TEXT)""")
         self.conn.commit()
 
     def create_user(self, username, password):
@@ -29,9 +30,9 @@ class Database:
             if self.cursor.fetchone() is None:
                 # Randomly select a profile picture between four options
                 pfp_pic = random.randint(0, 3)
-                self.cursor.execute("""INSERT INTO users (username, password, score, highscore, pfp_pic, last_seen, is_online, WinLossPush)
-                                    VALUES (?,?,?,?,?,?,?,?)""",
-                                    (username, encrypt(password), 100000, 100000, pfp_pic, datetime.datetime.now(), 1, "0/0/0"))
+                self.cursor.execute("""INSERT INTO users (username, password, score, highscore, pfp_pic, last_seen, is_online, WinLossPush, InTable)
+                                    VALUES (?,?,?,?,?,?,?,?,?)""",
+                                    (username, encrypt(password), 100000, 100000, pfp_pic, datetime.datetime.now(), 1, "0/0/0", "n"))
                 self.conn.commit()
                 return True, ""
             else:
@@ -123,3 +124,12 @@ class Database:
         win_loss_push_str = "/".join(map(str, win_loss_push))
         self.cursor.execute("UPDATE users SET WinLossPush=? WHERE username=?", (win_loss_push_str, username))
         self.conn.commit()
+
+    def update_in_table(self, username, table):
+        self.cursor.execute("UPDATE users SET InTable=? WHERE username=?", (table, username))
+        self.conn.commit()
+
+    def get_in_table(self, username):
+        self.cursor.execute("SELECT InTable FROM users WHERE username=?", (username,))
+        table = self.cursor.fetchone()[0]
+        return table

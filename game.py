@@ -64,6 +64,8 @@ visual_eye = pygame.transform.scale(pygame.image.load('Pictures/visual eye.png')
 left_arrow = pygame.transform.scale(pygame.image.load('Pictures/left-arrow.png'), (64, 64))
 right_arrow = pygame.transform.rotate(pygame.transform.scale(pygame.image.load('Pictures/left-arrow.png'),
                                                              (64, 64)), 180)
+
+Highlighted_BJ = pygame.image.load('BlackJack_Highlighted.png').convert_alpha()
 # Avatars
 # **screen.blit(Man, (display_width / 1.15, 120 // 2 - 32))**
 Man = pygame.image.load('Pictures/Man.png').convert_alpha()
@@ -84,6 +86,9 @@ second_place = pygame.image.load('Pictures/2nd_medal.png').convert_alpha()
 third_place = pygame.image.load('Pictures/3rd_medal.png').convert_alpha()
 all_medals = [first_place, second_place, third_place]
 
+table1_picture = pygame.transform.scale(pygame.image.load('Pictures/Table 1 picture.jpg'), (200, 200))
+table2_picture = pygame.transform.scale(pygame.image.load('Pictures/table2.jpg'), (200, 200))
+table3_picture = pygame.transform.scale(pygame.image.load('Pictures/table3.jpg'), (200, 200))
 card_names = [
     "2c", "3c", "4c", "5c", "6c", "7c", "8c", "9c", "10c", "jc", "qc", "kc", "ac",
     "2d", "3d", "4d", "5d", "6d", "7d", "8d", "9d", "10d", "jd", "qd", "kd", "ad",
@@ -107,46 +112,6 @@ clock = pygame.time.Clock()
 _circle_cache = {}
 
 fps = 60
-
-
-def _circlepoints(r):
-    r = int(round(r))
-    if r in _circle_cache:
-        return _circle_cache[r]
-    x, y, e = r, 0, 1 - r
-    _circle_cache[r] = points = []
-    while x >= y:
-        points.append((x, y))
-        y += 1
-        if e < 0:
-            e += 2 * y - 1
-        else:
-            x -= 1
-            e += 2 * (y - x) - 1
-    points += [(y, x) for x, y in points if x > y]
-    points += [(-x, y) for x, y in points if x]
-    points += [(x, -y) for x, y in points if y]
-    points.sort()
-    return points
-
-
-def render1(text, font, gfcolor=pygame.Color('white'), ocolor=(0, 0, 0), opx=8):
-    textsurface = font.render(text, True, gfcolor).convert_alpha()
-    w = textsurface.get_width() + 2 * opx
-    h = font.get_height()
-
-    osurf = pygame.Surface((w, h + 2 * opx)).convert_alpha()
-    osurf.fill((0, 0, 0, 0))
-
-    surf = osurf.copy()
-
-    osurf.blit(font.render(text, True, ocolor).convert_alpha(), (0, 0))
-
-    for dx, dy in _circlepoints(opx):
-        surf.blit(osurf, (dx + opx, dy + opx))
-
-    surf.blit(textsurface, (opx, opx))
-    return surf
 
 
 def bj_screen():
@@ -207,6 +172,7 @@ def login_menu(conn):
     username_txt = ""
     password_txt = ""
     hide_password = True
+    used_info = " ", " "
     visual_eye.set_alpha(128)
     username_button = pygame.Rect(265, 240, 270, 60)
 
@@ -215,6 +181,11 @@ def login_menu(conn):
 
     enter_button = pygame.Rect(username_button.x + 70, password_button.y + 90, username_button.w - 140,
                                username_button.h)
+    error_msg = LowFont.render("", True, (255, 255, 255))
+    error_msg_rect = error_msg.get_rect(center=(
+    display_width / 2, (display_height / 2 + password_button.h + password_button.y) / 2 + password_button.h))
+    error_msg.set_alpha(0)
+    fade_direction = "in"
     while True:
         bj_screen()
         draw_text("login", ButtonFont, (255, 255, 255), screen, display_width // 2, 232 - 40)
@@ -251,6 +222,12 @@ def login_menu(conn):
             draw_text(password_txt, ButtonFont, (255, 255, 255), screen, password_button.x + password_button.w // 2,
                       password_button.y + password_button.h // 2)
 
+        if error_msg.get_alpha() < 255 and fade_direction == "in":
+            error_msg.set_alpha(error_msg.get_alpha() + 5)
+        elif error_msg.get_alpha() > 0 and fade_direction == "out":
+            error_msg.set_alpha(error_msg.get_alpha() - 5)
+        screen.blit(error_msg, error_msg_rect)
+
         cursor = pygame.Rect((0, 0), (0, 0))
         if active_username:
             txt = ButtonFont.render(username_txt, True, (255, 255, 255))
@@ -282,12 +259,17 @@ def login_menu(conn):
                 elif password_button.collidepoint(event.pos):
                     active_password = True
                 elif enter_button.collidepoint(event.pos):
-                    cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["login_msg"],
-                                                     username_txt + DATA_DELIMITER + password_txt)
-                    if cmd == 'LOGIN_OK':
-                        loggedin_menu(conn, ast.literal_eval(msg))
-                    else:
-                        print(msg)
+                    if used_info != (username_txt, password_txt):
+                        used_info = (username_txt, password_txt)
+                        cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["login_msg"],
+                                                         username_txt + DATA_DELIMITER + password_txt)
+                        if cmd == 'LOGIN_OK':
+                            loggedin_menu(conn, ast.literal_eval(msg))
+                        else:
+                            error_msg = LowFont.render(msg, True, (255, 255, 255))
+                            error_msg_rect = error_msg.get_rect(center=(display_width / 2, (display_height/2 + password_button.h+password_button.y)/2 + password_button.h))
+                            error_msg.set_alpha(0)
+                            fade_direction = "in"
                 elif visual_eye_rec.collidepoint(event.pos):
                     hide_password = not hide_password
                 if not username_button.collidepoint(event.pos) and not visual_eye_rec.collidepoint(event.pos):
@@ -303,11 +285,17 @@ def login_menu(conn):
                         username_txt = username_txt[:-1]
                     elif len(username_txt) < 9 and event.unicode.lower() in available_chars:
                         username_txt += event.unicode.lower()
+                    if fade_direction != "out":
+                        error_msg.set_alpha(255)
+                        fade_direction = "out"
                 if active_password:
                     if event.key == pygame.K_BACKSPACE:
                         password_txt = password_txt[:-1]
                     elif len(password_txt) < 9 and event.unicode.lower() in available_chars:
                         password_txt += event.unicode.lower()
+                    if fade_direction != "out":
+                        error_msg.set_alpha(255)
+                        fade_direction = "out"
 
         if time.time() % 1 > 0.5 and (active_username or active_password):
             pygame.draw.rect(screen, 'white', cursor)
@@ -324,6 +312,7 @@ def register_menu(conn):
     username_txt = ""
     password_txt = ""
     hide_password = True
+    used_info = " ", " "
     visual_eye.set_alpha(128)
     username_button = pygame.Rect(265, 240, 270, 60)
 
@@ -332,6 +321,11 @@ def register_menu(conn):
 
     enter_button = pygame.Rect(username_button.x + 70, password_button.y + 90, username_button.w - 140,
                                username_button.h)
+    error_msg = LowFont.render("", True, (255, 255, 255))
+    error_msg_rect = error_msg.get_rect(center=(
+    display_width / 2, (display_height / 2 + password_button.h + password_button.y) / 2 + password_button.h))
+    error_msg.set_alpha(0)
+    fade_direction = "in"
     while True:
         bj_screen()
         draw_text("register", ButtonFont, (255, 255, 255), screen, display_width // 2, 232 - 40)
@@ -368,6 +362,12 @@ def register_menu(conn):
             draw_text(password_txt, ButtonFont, (255, 255, 255), screen, password_button.x + password_button.w // 2,
                       password_button.y + password_button.h // 2)
 
+        if error_msg.get_alpha() < 255 and fade_direction == "in":
+            error_msg.set_alpha(error_msg.get_alpha() + 5)
+        elif error_msg.get_alpha() > 0 and fade_direction == "out":
+            error_msg.set_alpha(error_msg.get_alpha() - 5)
+        screen.blit(error_msg, error_msg_rect)
+
         cursor = pygame.Rect((0, 0), (0, 0))
         if active_username:
             txt = ButtonFont.render(username_txt, True, (255, 255, 255))
@@ -399,12 +399,17 @@ def register_menu(conn):
                 elif password_button.collidepoint(event.pos):
                     active_password = True
                 elif enter_button.collidepoint(event.pos):
-                    cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["register_msg"],
-                                                     username_txt + DATA_DELIMITER + password_txt)
-                    if cmd == 'REGISTER_OK':
-                        loggedin_menu(conn, ast.literal_eval(msg))
-                    else:
-                        print(msg)
+                    if used_info != (username_txt, password_txt):
+                        used_info = (username_txt, password_txt)
+                        cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["register_msg"],
+                                                         username_txt + DATA_DELIMITER + password_txt)
+                        if cmd == 'REGISTER_OK':
+                            loggedin_menu(conn, ast.literal_eval(msg))
+                        else:
+                            error_msg = LowFont.render(msg, True, (255, 255, 255))
+                            error_msg_rect = error_msg.get_rect(center=(display_width / 2, (display_height/2 + password_button.h+password_button.y)/2 + password_button.h))
+                            error_msg.set_alpha(0)
+                            fade_direction = "in"
                 elif visual_eye_rec.collidepoint(event.pos):
                     hide_password = not hide_password
                 if not username_button.collidepoint(event.pos) and not visual_eye_rec.collidepoint(event.pos):
@@ -420,11 +425,17 @@ def register_menu(conn):
                         username_txt = username_txt[:-1]
                     elif len(username_txt) < 9 and event.unicode.lower() in available_chars:
                         username_txt += event.unicode.lower()
+                    if fade_direction != "out":
+                        error_msg.set_alpha(255)
+                        fade_direction = "out"
                 if active_password:
                     if event.key == pygame.K_BACKSPACE:
                         password_txt = password_txt[:-1]
                     elif len(password_txt) < 9 and event.unicode.lower() in available_chars:
                         password_txt += event.unicode.lower()
+                    if fade_direction != "out":
+                        error_msg.set_alpha(255)
+                        fade_direction = "out"
 
         if time.time() % 1 > 0.5 and (active_username or active_password):
             pygame.draw.rect(screen, 'white', cursor)
@@ -436,7 +447,6 @@ def register_menu(conn):
 
 
 def loggedin_menu(conn, user_info):
-    print(user_info)
     while True:
         bj_screen()
 
@@ -518,23 +528,25 @@ def play_menu(conn, user_info):
         if highlighted_podium_true:
             screen.blit(Highlighted_podium, Highlighted_podium_rect)
 
-        bj_txt = render1('BlackJack', MainScreenFont)
-        blackjack_rect = bj_txt.get_rect()
+        blackjack_rect = Highlighted_BJ.get_rect()
         blackjack_rect.center = (display_width // 2, 120 // 2)
-        BlackJack_mask = pygame.mask.from_surface(bj_txt)
+        BlackJack_mask = pygame.mask.from_surface(Highlighted_BJ)
         if bj_txt_true:
-            screen.blit(bj_txt, blackjack_rect)
+            screen.blit(Highlighted_BJ, blackjack_rect)
 
-        table_button1 = pygame.Rect(100, 230, 140, 140)
+        table_button1 = pygame.Rect(55, 230, 200, 200)
         pygame.draw.rect(screen, "black", table_button1)
+        screen.blit(table1_picture, (table_button1.x, table_button1.y))
 
-        table_button2 = pygame.Rect(table_button1.x + table_button1.w + 90, table_button1.y, table_button1.w,
+        table_button2 = pygame.Rect(table_button1.x + table_button1.w + 45, table_button1.y, table_button1.w,
                                     table_button1.h)
         pygame.draw.rect(screen, "black", table_button2)
+        screen.blit(table2_picture, (table_button1.x + table_button1.w + 45, table_button1.y))
 
-        table_button3 = pygame.Rect(table_button2.x + table_button2.w + 90, table_button2.y, table_button2.w,
+        table_button3 = pygame.Rect(table_button2.x + table_button2.w + 45, table_button2.y, table_button2.w,
                                     table_button2.h)
         pygame.draw.rect(screen, "black", table_button3)
+        screen.blit(table3_picture, (table_button2.x + table_button2.w + 45, table_button2.y))
 
         for event in pygame.event.get():
             if event.type == pygame.MOUSEMOTION:
@@ -570,7 +582,18 @@ def play_menu(conn, user_info):
                     highlighted_podium_true = False
                     leaderboard_menu(conn, user_info)
                 if table_button1.collidepoint(event.pos):
-                    user_info = table1(conn, user_info)
+                    cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["join_table"], user_info[1] + DATA_DELIMITER + "0")
+                    if cmd != 'ERROR':
+                        user_info = table1(conn, user_info, "0",  ast.literal_eval(msg))
+                elif table_button2.collidepoint(event.pos):
+                    cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["join_table"], user_info[1] + DATA_DELIMITER + "1")
+                    if cmd != 'ERROR':
+                        user_info = table1(conn, user_info, "1",  ast.literal_eval(msg))
+                elif table_button3.collidepoint(event.pos):
+                    cmd, msg = build_send_recv_parse(conn, PROTOCOL_CLIENT["join_table"], user_info[1] + DATA_DELIMITER + "2")
+                    if cmd != 'ERROR':
+                        user_info = table1(conn, user_info, "2", ast.literal_eval(msg))
+
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
@@ -613,12 +636,11 @@ def profile_menu(conn, user_info):
         if highlighted_podium_true:
             screen.blit(Highlighted_podium, Highlighted_podium_rect)
 
-        bj_txt = render1('BlackJack', MainScreenFont)
-        blackjack_rect = bj_txt.get_rect()
+        blackjack_rect = Highlighted_BJ.get_rect()
         blackjack_rect.center = (display_width // 2, 120 // 2)
-        BlackJack_mask = pygame.mask.from_surface(bj_txt)
+        BlackJack_mask = pygame.mask.from_surface(Highlighted_BJ)
         if bj_txt_true:
-            screen.blit(bj_txt, blackjack_rect)
+            screen.blit(Highlighted_BJ, blackjack_rect)
 
         screen.blit(pygame.transform.scale(big_pfp, (250, 250)), (75, 170))
         save_pfp_button = pygame.Rect(120, 440, 160, 45)
@@ -748,12 +770,11 @@ def leaderboard_menu(conn, user_info):
         if highlighted_podium_true:
             screen.blit(Highlighted_podium, Highlighted_podium_rect)
 
-        bj_txt = render1('BlackJack', MainScreenFont)
-        blackjack_rect = bj_txt.get_rect()
+        blackjack_rect = Highlighted_BJ.get_rect()
         blackjack_rect.center = (display_width // 2, 120 // 2)
-        BlackJack_mask = pygame.mask.from_surface(bj_txt)
+        BlackJack_mask = pygame.mask.from_surface(Highlighted_BJ)
         if bj_txt_true:
-            screen.blit(bj_txt, blackjack_rect)
+            screen.blit(Highlighted_BJ, blackjack_rect)
 
         for i in range(len(users_leaderboard)):
             draw_text(str(i + 1), ButtonFont, 'white', screen, 60, 180 + i * 90)
@@ -819,57 +840,22 @@ def leaderboard_menu(conn, user_info):
 def receive_information_from_server(conn):
     while not stop_event.is_set():
         # replace this with your code to receive information from the server
-        cmd, msg = recv_message_and_parse(conn)
+        try:
+            cmd, msg = recv_message_and_parse(conn)
+        except ConnectionResetError or ConnectionAbortedError:
+            stop_event.set()
+            information_queue.put((PROTOCOL_SERVER["error_msg"], "[]"))
         if msg:
             # add received information to the queue
-            information_queue.put(msg)
+            information_queue.put((cmd, msg))
     print("--closed thread--")
 
 
-def table1(conn, user_info):
+def table1(conn, user_info, chosen_table, game_state):
+
     stop_event.clear()
-    server_thread = threading.Thread(target=receive_information_from_server, args=(conn,))
-    server_thread.start()
-    build_and_send_message(conn, PROTOCOL_CLIENT["join_table"], "0")
-
-    game_state = {
-        "seats": [
-            {
-                "name": None,
-                "profile_picture": None,
-                "cards": [],
-                "bet": None,
-                "reaction": None,
-                "result": [None, None],
-                "wlp": None
-            },
-            {
-                "name": None,
-                "profile_picture": None,
-                "cards": [],
-                "bet": None,
-                "reaction": None,
-                "result": [None, None],
-                "wlp": None
-            },
-            {
-                "name": None,
-                "profile_picture": None,
-                "cards": [],
-                "bet": None,
-                "reaction": None,
-                "result": [None, None],
-                "wlp": None
-            }
-        ],
-        "dealer": {
-            "cards": [],
-            "result": [None, None]
-        },
-        "is_game_over": True,
-        "timer": [None, None, None]
-    }
-
+    info_thread = threading.Thread(target=receive_information_from_server, args=(conn,))
+    info_thread.start()
     offset_x = None
     scroll_value = 0
     scroll_bar_rect = pygame.Rect(52, 550, 300, 20)
@@ -884,14 +870,17 @@ def table1(conn, user_info):
     remaining_time = 1
     while True:
         try:
-            information = information_queue.get_nowait()
-            var = ast.literal_eval(information)
-            if len(var) == 8:
+            cmd, msg = information_queue.get_nowait()
+            var = ast.literal_eval(msg)
+            if cmd == PROTOCOL_SERVER["update_info"]:
                 user_info = var
-            else:
+            elif cmd == PROTOCOL_SERVER["get_info_table"]:
                 if var["timer"] != game_state["timer"]:
                     bone = True
                 game_state = var
+            elif cmd == PROTOCOL_SERVER["error_msg"]:
+
+                return connection_stopped()
             print(var)
         except queue.Empty:
             pass
@@ -1114,20 +1103,20 @@ def table1(conn, user_info):
             if event.type == pygame.QUIT:
                 stop_event.set()
                 build_and_send_message(conn, PROTOCOL_CLIENT["leave_game"],
-                                       user_info[1] + DATA_DELIMITER + '0' + DATA_DELIMITER + str(taken_seat))
-                server_thread.join()
+                                       user_info[1] + DATA_DELIMITER + chosen_table + DATA_DELIMITER + str(taken_seat))
+                info_thread.join()
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     if taken_seat is not None and game_state["is_game_over"]:
                         build_and_send_message(conn, PROTOCOL_CLIENT["leave_seat"],
-                                               '0' + DATA_DELIMITER + str(taken_seat))
+                                               chosen_table + DATA_DELIMITER + str(taken_seat))
                         taken_seat = None
                     elif taken_seat is None:
                         stop_event.set()
-                        build_and_send_message(conn, PROTOCOL_CLIENT["leave_table"], "0")
-                        server_thread.join()
+                        build_and_send_message(conn, PROTOCOL_CLIENT["leave_table"], chosen_table)
+                        info_thread.join()
                         return user_info
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if table_seat1_mask.get_rect().collidepoint(event.pos) and \
@@ -1137,7 +1126,7 @@ def table1(conn, user_info):
                         game_state["seats"][0]["name"] is None \
                         and game_state["is_game_over"]:
                     build_and_send_message(conn, PROTOCOL_CLIENT["join_seat"],
-                                           '0' + DATA_DELIMITER + '0')
+                                           str(user_info[4]) + DATA_DELIMITER + user_info[1] + DATA_DELIMITER + chosen_table + DATA_DELIMITER + '0')
                 elif table_seat2.get_rect().collidepoint(event.pos) and \
                         table_seat2_mask.get_at(
                             (event.pos[0] - table_seat2_mask.get_rect().x,
@@ -1145,7 +1134,7 @@ def table1(conn, user_info):
                         game_state["seats"][1]["name"] is None \
                         and game_state["is_game_over"]:
                     build_and_send_message(conn, PROTOCOL_CLIENT["join_seat"],
-                                           '0' + DATA_DELIMITER + '1')
+                                           str(user_info[4]) + DATA_DELIMITER + user_info[1] + DATA_DELIMITER + chosen_table + DATA_DELIMITER + '1')
                 elif table_seat3_mask.get_rect().collidepoint(event.pos) and \
                         table_seat3_mask.get_at(
                             (event.pos[0] - table_seat3_mask.get_rect().x,
@@ -1153,7 +1142,7 @@ def table1(conn, user_info):
                         game_state["seats"][2]["name"] is None \
                         and game_state["is_game_over"]:
                     build_and_send_message(conn, PROTOCOL_CLIENT["join_seat"],
-                                           '0' + DATA_DELIMITER + '2')
+                                           str(user_info[4]) + DATA_DELIMITER + user_info[1] + DATA_DELIMITER + chosen_table + DATA_DELIMITER + '2')
                 if taken_seat is not None:
                     if hit_mask.get_rect().collidepoint(event.pos) and \
                             hit_mask.get_at(
@@ -1163,7 +1152,7 @@ def table1(conn, user_info):
                             game_state["seats"][taken_seat]["result"][1] is None and len(
                         game_state["dealer"]["cards"]) == 1 and remaining_time != 0:
                         build_and_send_message(conn, PROTOCOL_CLIENT["reaction"],
-                                               '0' + DATA_DELIMITER + str(taken_seat) + DATA_DELIMITER + "hit")
+                                               chosen_table + DATA_DELIMITER + str(taken_seat) + DATA_DELIMITER + "hit")
                     elif stand_mask.get_rect().collidepoint(event.pos) and \
                             stand_mask.get_at(
                                 (event.pos[0] - stand_mask.get_rect().x, event.pos[1] - stand_mask.get_rect().y)) \
@@ -1172,7 +1161,7 @@ def table1(conn, user_info):
                             game_state["seats"][taken_seat]["result"][1] is None and len(
                         game_state["dealer"]["cards"]) == 1 and remaining_time != 0:
                         build_and_send_message(conn, PROTOCOL_CLIENT["reaction"],
-                                               '0' + DATA_DELIMITER + str(taken_seat) + DATA_DELIMITER + "stand")
+                                               chosen_table + DATA_DELIMITER + str(taken_seat) + DATA_DELIMITER + "stand")
                     elif double_down_mask.get_rect().collidepoint(event.pos) and \
                             double_down_mask.get_at((event.pos[0] - double_down_mask.get_rect().x,
                                                      event.pos[1] - double_down_mask.get_rect().y)) \
@@ -1182,7 +1171,7 @@ def table1(conn, user_info):
                         game_state["seats"][taken_seat]["cards"]) == 2 and len(
                         game_state["dealer"]["cards"]) == 1 and remaining_time != 0:
                         build_and_send_message(conn, PROTOCOL_CLIENT["reaction"],
-                                               '0' + DATA_DELIMITER + str(taken_seat) + DATA_DELIMITER + "double_down")
+                                               chosen_table + DATA_DELIMITER + str(taken_seat) + DATA_DELIMITER + "double_down")
                     elif scroll_bar_rect.collidepoint(event.pos) and game_state["seats"][taken_seat]["bet"] is None:
                         # Set the offset for the scroll handle
                         scroll_handle_rect.x = event.pos[0] - scroll_handle_rect.w / 2
@@ -1193,13 +1182,13 @@ def table1(conn, user_info):
                         scroll_value = int((scroll_handle_rect.x - scroll_bar_rect.left) / (
                                 scroll_bar_rect.width - scroll_handle_rect.width) * MAX_VALUE)
                         offset_x = 1
-                    elif left_button_rect.collidepoint(event.pos) and game_state["seats"][taken_seat]["bet"] is None:
+                    elif left_button_rect.collidepoint(event.pos) and game_state["seats"][taken_seat]["bet"] is None and MAX_VALUE > 0:
                         scroll_value = max(0, scroll_value - 1)
                         scroll_handle_rect.x = int(
                             scroll_bar_rect.left + scroll_value / MAX_VALUE * (
                                     scroll_bar_rect.width - scroll_handle_rect.width))
                         offset_x = None
-                    elif right_button_rect.collidepoint(event.pos) and game_state["seats"][taken_seat]["bet"] is None:
+                    elif right_button_rect.collidepoint(event.pos) and game_state["seats"][taken_seat]["bet"] is None and MAX_VALUE > 0:
                         scroll_value = min(MAX_VALUE, scroll_value + 1)
                         scroll_handle_rect.x = int(
                             scroll_bar_rect.left + scroll_value / MAX_VALUE * (
@@ -1211,11 +1200,11 @@ def table1(conn, user_info):
                         scroll_value = 0
                         scroll_handle_rect.x = scroll_bar_rect.x
                         build_and_send_message(conn, PROTOCOL_CLIENT["change_bet"],
-                                               '0' + DATA_DELIMITER + str(taken_seat) + DATA_DELIMITER + str(value_bet))
+                                               chosen_table + DATA_DELIMITER + str(taken_seat) + DATA_DELIMITER + str(value_bet))
                     elif undo_rect.collidepoint(event.pos) and game_state["seats"][taken_seat]["bet"] is not None and \
                             game_state["is_game_over"] is True:
                         build_and_send_message(conn, PROTOCOL_CLIENT["change_bet"],
-                                               '0' + DATA_DELIMITER + str(taken_seat) + DATA_DELIMITER + str(None))
+                                               chosen_table + DATA_DELIMITER + str(taken_seat) + DATA_DELIMITER + str(None))
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1 and offset_x is not None and taken_seat is not None:
                     if scroll_bar_rect.x + scroll_bar_rect.w - scroll_handle_rect.w / 2 < event.pos[0]:
@@ -1263,6 +1252,29 @@ def help_menu(conn, user_info):
         clock.tick(fps)
 
 
+def connection_stopped():
+    while True:
+        screen.fill((0, 0, 0))  # this fills the entire surface
+        quit_button = pygame.Rect((display_width - 80) // 2, (display_height - 80) // 2, 80, 80)
+        pygame.draw.rect(screen, "white", quit_button)
+        draw_text("quit", ButtonFont, (0, 0, 0), screen, display_width / 2, display_height / 2)
+        draw_text("The Connection To The Server Has Stopped!", MediumFont, (255, 255, 255), screen, display_width / 2, 100)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if quit_button.collidepoint(event.pos):
+                    pygame.quit()
+                    sys.exit()
+
+        pygame.display.update()
+        clock.tick(fps)
+
 def connect(ip, port):
     """Connects to the server"""
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -1278,4 +1290,7 @@ def main(ip, port):
 
 
 if __name__ == "__main__":
-    main("127.0.0.1", 51235)
+    try:
+        main("127.0.0.1", 51235)
+    except ConnectionResetError or ConnectionAbortedError:
+        connection_stopped()

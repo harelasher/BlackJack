@@ -28,7 +28,9 @@ PROTOCOL_SERVER = {'login_ok_msg': 'LOGIN_OK',
                    'leaderboard_ok': 'LEADERBOARD_OK',
                    'join_seat_ok': "JOIN_SEAT_OK",
                    'leave_seat_ok': "LEAVE_SEAT_OK",
-                   'leave_table_ok': "leave_table_ok",
+                   'leave_table_ok': "LEAVE_TABLE_OK",
+                   "get_info_table": "GET_INFO_TABLE",
+                   "update_info": "UPDATE_INFO",
                    'error_msg': 'ERROR'}
 ERROR = None
 
