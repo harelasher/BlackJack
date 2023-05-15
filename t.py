@@ -19,7 +19,8 @@ PROTOCOL_CLIENT = {'login_msg': 'LOGIN',
                    'leave_table': "LEAVE_TABLE",
                    "leave_game": "LEAVE_GAME",
                    "change_bet": "CHANGE_BET",
-                   "reaction": "REACTION"}
+                   "reaction": "REACTION",
+                   "check_hour": "CHECK_HOUR"}
 PROTOCOL_SERVER = {'login_ok_msg': 'LOGIN_OK',
                    'login_failed_msg': 'ERROR',
                    'register_ok_msg': "REGISTER_OK",
@@ -41,27 +42,32 @@ def build_message(cmd, data):
 
     data_length = len(data)
     cmd_length = len(cmd)
-    if data_length > MAX_DATA_LENGTH:
-        return ERROR
-    elif cmd_length > CMD_FIELD_LENGTH:
+    if data_length > MAX_DATA_LENGTH or cmd_length > CMD_FIELD_LENGTH:
+        # Check if the data length and the command length exceeds the maximum allowed length
         return ERROR
     else:
+        # Pad the command with spaces to the fixed length
         padded_cmd = cmd.strip().ljust(CMD_FIELD_LENGTH)
+        # Convert the data length to a string and pad it with zeros to the fixed length
         padded_length = str(data_length).zfill(LENGTH_FIELD_LENGTH)
-        full_msg = f"{padded_cmd}{DELIMITER}{padded_length}{DELIMITER}{data}"
+        full_msg = f"{padded_cmd}{DELIMITER}{padded_length}{DELIMITER}{data}"  # Create the full message
         print(full_msg)
         return encrypt(full_msg)
+        # Encrypt the full message and return it
 
 
 def parse_message(full_msg):
     if len(full_msg) == 0:
+        # Check if the full message is empty
         return ERROR, ERROR
     full_msg = decrypt(full_msg).decode()
+    # Decrypt the full message and decode it
     if len(full_msg) < CMD_FIELD_LENGTH + 1 + LENGTH_FIELD_LENGTH + 1:
         return ERROR, ERROR
     cmd_str = full_msg[0:CMD_FIELD_LENGTH]
     length = full_msg[CMD_FIELD_LENGTH + 1:CMD_FIELD_LENGTH + 1 + LENGTH_FIELD_LENGTH]
     if full_msg[CMD_FIELD_LENGTH] != DELIMITER or full_msg[(CMD_FIELD_LENGTH + LENGTH_FIELD_LENGTH + 1)] != DELIMITER:
+        # Check the delimiters and the length format
         return ERROR, ERROR
     elif not length.strip().isdigit():
         return ERROR, ERROR
@@ -71,6 +77,7 @@ def parse_message(full_msg):
         return ERROR, ERROR
     else:
         return cmd_str.strip(), data_str
+        # Return the command and data as strings
 
 
 def build_send_recv_parse(conn, code, data):  # מחבר את שתי הפונקציה, יוצר הודעה שולח אותה ומחכה לתשובה
