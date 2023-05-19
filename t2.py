@@ -2,7 +2,7 @@ import sys
 import pygame
 import string
 import socket
-from t import *
+from networking_protocol import *
 import ast
 import time
 
@@ -507,6 +507,7 @@ def loggedin_menu(conn, user_info):
     """screen after player logged in"""
     bj_txt_true = False
     while True:
+
         bj_screen()
 
         blackjack_rect = Highlighted_BJ.get_rect()
@@ -580,6 +581,7 @@ def play_menu(conn, user_info):
     hourly_pay_msg.set_alpha(0)
     fade_direction = ""
     while True:
+
         screen.blit(overlay, (0, 0))
         draw_text("BlackJack", MainScreenFont, (255, 255, 255), screen, display_width // 2, 120 // 2)
         draw_text(f"chips: {user_info[2]}", HelveticaFont, (255, 255, 255), screen, display_width // 2, 215 // 2)
@@ -751,6 +753,7 @@ def profile_menu(conn, user_info):
     bj_txt_true = False
     big_pfp = pfp_pictures[user_info[4]]
     while True:
+
         screen.blit(overlay, (0, 0))
         draw_text("BlackJack", MainScreenFont, (255, 255, 255), screen, display_width // 2, 120 // 2)
         draw_text('profile page', HelveticaFont, (255, 255, 255), screen, display_width // 2, 215 // 2)
@@ -886,6 +889,7 @@ def leaderboard_menu(conn, user_info):
     prev_time = time.time()
     print(users_leaderboard)
     while True:
+
         screen.blit(overlay, (0, 0))
         draw_text("BlackJack", MainScreenFont, (255, 255, 255), screen, display_width // 2, 120 // 2)
         draw_text("leaderboard of the biggest scores", HelveticaFont, (255, 255, 255), screen, display_width // 2,
@@ -1031,6 +1035,7 @@ def table1(conn, user_info, chosen_table, game_state):
 
     MAX_VALUE = user_info[2]
     while True:
+
         try:
             # retrieves the information from the thread function
             cmd, msg = information_queue.get_nowait()
@@ -1261,7 +1266,6 @@ def table1(conn, user_info, chosen_table, game_state):
                 if blackjack_rect.collidepoint(event.pos) and \
                         BlackJack_mask.get_at((event.pos[0] - blackjack_rect.x, event.pos[1] - blackjack_rect.y)):
                     bj_txt_true = True
-                    pygame.image.save(screen, "blackjack_table.png")
                 else:
                     bj_txt_true = False
             if event.type == pygame.QUIT:
@@ -1422,6 +1426,7 @@ def help_menu():
     help_screen.set_alpha(200)  # alpha level
 
     while True:
+
         bj_screen()
 
         play_button = pygame.Rect(265, 190, 270, 65)
@@ -1508,6 +1513,8 @@ def help_menu():
 def connection_stopped():
     """function to where the connection to the server has stopped"""
     while True:
+        pygame.image.save(screen, "connection_stopped_screen.png")
+
         screen.fill((0, 0, 0))  # this fills the entire surface
         quit_button = pygame.Rect((display_width - 80) // 2, (display_height - 80) // 2, 80, 80)
         pygame.draw.rect(screen, "white", quit_button)

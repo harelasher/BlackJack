@@ -1,7 +1,7 @@
 import threading
 import socket
 from DB_Class import *
-from t import *
+from networking_protocol import *
 import time
 import random
 
@@ -135,6 +135,10 @@ card_names = [
     "2s", "3s", "4s", "5s", "6s", "7s", "8s", "9s", "10s", "js", "qs", "ks", "as"
 ]  # all the card names
 
+database_lock = threading.Lock()
+table1_lock, table2_lock, table3_lock = threading.Lock(), threading.Lock(), threading.Lock()
+tables_locks = [table1_lock, table2_lock, table3_lock]
+
 
 def setup_socket():
     """creates and sets up the socket"""
@@ -147,7 +151,9 @@ def setup_socket():
 def handle_login_message(conn, data, address):
     """Function to handle login messages from clients"""
     username, password = data.split("#")[0], data.split("#")[1]
+    database_lock.acquire()
     message = db.login_check(username, password)
+    database_lock.release()
     result, message = message[0], message[1]
     if result:
         logged_users[address] = username
@@ -158,16 +164,18 @@ def handle_login_message(conn, data, address):
 
 def handle_logout_message(username, address):
     """Function to handle logout messages from clients"""
-    logged_users[address] = ""
-    db.logout(username)
-    del logged_users[address]
-    print(f'logout username: ({username}) OK')
+    result = db.logout(username)
+    if result:
+        logged_users[address] = ""
+        print(f'logout username: ({username}) OK')
 
 
 def handle_register_message(conn, data, address):
     """Function to handle register messages from clients"""
     username, password = data.split("#")[0], data.split("#")[1]
+    database_lock.acquire()
     message = db.create_user(username, password)
+    database_lock.release()
     result, message = message[0], message[1]
     if result:
         logged_users[address] = username
@@ -179,9 +187,13 @@ def handle_register_message(conn, data, address):
 def handle_change_pfp_message(conn, data):
     """Function to handle change profile picture messages from clients"""
     username, pfp = data.split("#")[0], data.split("#")[1]
+    database_lock.acquire()
     result = db.change_pfp_pic(username, pfp)
+    database_lock.release()
     if result:
         build_and_send_message(conn, PROTOCOL_SERVER['change_pfp_ok'], str(db.get_user_info(username)))
+    else:
+        build_and_send_message(conn, PROTOCOL_SERVER['error_msg'], "")
 
 
 def handle_leaderboard_message(conn):
@@ -193,12 +205,15 @@ def handle_leaderboard_message(conn):
 def handle_join_seat(conn, data):
     """Function to handle joining a seat at a table"""
     pfp, username, chosen_table, seat = data.split("#")[0], data.split("#")[1], data.split("#")[2], data.split("#")[3]
+    tables_locks[int(chosen_table)].acquire()
     if tables[int(chosen_table)]["seats"][int(seat)]["name"] is not None:
         # Check if the seat is already occupied by another player
+        tables_locks[int(chosen_table)].release()
         return build_and_send_message(conn, PROTOCOL_SERVER['error_msg'], "")
     tables[int(chosen_table)]["seats"][int(seat)]["name"] = username
     tables[int(chosen_table)]["seats"][int(seat)]["profile_picture"] = pfp
     db.update_in_table(username, chosen_table)
+    tables_locks[int(chosen_table)].release()
     for player in all_table_players[int(chosen_table)].values():
         # send all the players at the table the updated table
         build_and_send_message(player, PROTOCOL_SERVER['get_info_table'], str(tables[int(chosen_table)]))
@@ -265,6 +280,7 @@ def check_starting_game(chosen_table):
         if player["bet"] is not None:
             # If a player has placed a bet, set the running flag to True
             running = True
+    tables_locks[int(chosen_table)].acquire()
     if running and tables[int(chosen_table)]["timer"][0] is None:
         # Check if the game should start and a timer is not already running
         print("strating new table thread...")
@@ -274,10 +290,10 @@ def check_starting_game(chosen_table):
         game_thread.start()
         # Start the game thread
     elif not running:
-        # game_thread.join
         tables[int(chosen_table)]["timer"][0] = None
         tables[int(chosen_table)]["timer"][1] = None
         tables[int(chosen_table)]["timer"][2] = None
+    tables_locks[int(chosen_table)].release()
     for player in all_table_players[int(chosen_table)].values():
         build_and_send_message(player, PROTOCOL_SERVER['get_info_table'], str(tables[int(chosen_table)]))
 
@@ -306,13 +322,18 @@ def handle_game_blackjack(chosen_table):
     tables[int(chosen_table)]["dealer"]["cards"] = [random.choice(card_names)]  # Deal cards to the dealer
     calculate_card_result(tables[int(chosen_table)]["dealer"])
     # Deal cards to the players and calculate their card results
+    database_lock.acquire()
+    tables_locks[int(chosen_table)].acquire()
     for player in tables[int(chosen_table)]["seats"]:
-        if player["bet"] is None:
+        if player["bet"] is None and player["name"] is not None:
+            db.update_in_table(player["name"], "n")
             player["name"] = None
             player["profile_picture"] = None
         elif player["name"] is not None:
             player["cards"] = [random.choice(card_names), random.choice(card_names)]
             calculate_card_result(player)
+    tables_locks[int(chosen_table)].release()
+    database_lock.release()
     for player in all_table_players[int(chosen_table)].values():
         build_and_send_message(player, PROTOCOL_SERVER['get_info_table'], str(tables[int(chosen_table)]))
     time.sleep(tables[int(chosen_table)]["timer"][1] - time.time())
@@ -321,7 +342,8 @@ def handle_game_blackjack(chosen_table):
         # Dealer's turn: Draw cards until the dealer's hand value reaches 17 or more
         tables[int(chosen_table)]["dealer"]["cards"].append(random.choice(card_names))
         calculate_card_result(tables[int(chosen_table)]["dealer"])
-
+    database_lock.acquire()
+    tables_locks[int(chosen_table)].acquire()
     for player in tables[int(chosen_table)]["seats"]:
         # Determine the game results for each player
         if player["name"] is not None:
@@ -349,6 +371,8 @@ def handle_game_blackjack(chosen_table):
             if player["name"] in all_table_players[int(chosen_table)]:
                 build_and_send_message(all_table_players[int(chosen_table)][player["name"]],
                                        PROTOCOL_SERVER['update_info'], str(db.get_user_info(player["name"])))
+    tables_locks[int(chosen_table)].release()
+    database_lock.release()
     # Reset timer values
     tables[int(chosen_table)]["timer"][0] = None
     tables[int(chosen_table)]["timer"][1] = None
@@ -368,7 +392,9 @@ def handle_game_blackjack(chosen_table):
     for player in tables[int(chosen_table)]["seats"]:
         # Reset player data and update their in_table status
         if player["name"] not in all_table_players[int(chosen_table)]:
+            database_lock.acquire()
             db.update_in_table(player["name"], "n")
+            database_lock.release()
             player["name"] = None
             player["profile_picture"] = None
 
@@ -418,22 +444,25 @@ def handle_client_message(client_socket, address):
             cmd, msg = ERROR, ERROR
         print(cmd, msg, address)
         if cmd == ERROR or msg == ERROR:
-            # handle unexpected logout
-            if address in logged_users:
-                handle_logout_message(logged_users[address], address)
             print(f"~connection stopped {address}~")
             client_socket.close()
-            for i in range(len(all_table_players)):
-                for key1 in all_table_players[i]:
-                    if all_table_players[i][key1] == client_socket:
-                        for j in range(len(tables[i]["seats"])):
-                            if tables[i]["seats"][j]["name"] == key1 and tables[i]['is_game_over'] is True:
-                                del all_table_players[i][key1]
-                                handle_leave_seat(client_socket, str(i) + DATA_DELIMITER + str(j))
-                                return
-                        del all_table_players[i][key1]
-                        return
-            return
+            if address in logged_users:
+                username = logged_users[address]
+                handle_logout_message(username, address)
+                if username == "":
+                    return
+                for i in range(len(all_table_players)):
+                    if username in all_table_players[i]:
+                        del all_table_players[i][username]
+                user_table = db.get_in_table(username)
+
+                if user_table.isdigit() and tables[int(user_table)]['is_game_over']:
+                    for i in range(len(tables[int(user_table)]["seats"])):
+                        if tables[int(user_table)]["seats"][i]["name"] == username:
+                            handle_leave_seat(client_socket, user_table + DATA_DELIMITER + str(i))
+                            return
+                return
+
         elif cmd == PROTOCOL_CLIENT['login_msg']:
             handle_login_message(client_socket, msg, address)
         elif cmd == PROTOCOL_CLIENT['register_msg']:
@@ -499,7 +528,9 @@ def handle_reaction(data):
 
 def check_hourly_pay(conn, username):
     """The client send their username in order to know if they are eligible for the hourly pay"""
+    database_lock.acquire()
     result = db.has_passed_one_hour(username)  # checks with the database
+    database_lock.release()
     build_and_send_message(conn, PROTOCOL_SERVER["update_info"], str([db.get_user_info(username), result]))
     # sends the client a response
 
@@ -509,7 +540,6 @@ def main():
     The server waits for any connection with a client, and then it makes it a thread which handles it requests."""
     server_socket = setup_socket()
     print("Server is listening for clients...")
-
     while True:
         client_socket, address = server_socket.accept()  # accepts client connection, and makes a thread for it.
         print(f"Client connected from {address}")

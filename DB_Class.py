@@ -2,7 +2,7 @@
 import sqlite3
 import time
 import random
-from t import encrypt, decrypt
+from networking_protocol import encrypt, decrypt
 DatabasePath = 'blackjack.db'
 
 
