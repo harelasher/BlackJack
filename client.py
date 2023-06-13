@@ -690,7 +690,7 @@ def play_menu(conn, user_info):
                     hourly_pay_msg.set_alpha(0)
                     fade_direction = "out"
                     highlighted_podium_true = False
-                    leaderboard_menu(conn, user_info)
+                    user_info = leaderboard_menu(conn, user_info)
                 elif Highlighted_hourly_pay_rect.collidepoint(event.pos) and \
                         Highlighted_hourly_pay_mask.get_at(
                             (
